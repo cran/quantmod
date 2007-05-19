@@ -1,0 +1,101 @@
+#import(methods)
+importFrom(graphics,plot)
+importFrom(stats,predict)
+importFrom(stats,lag)
+importFrom(stats,fitted)
+importFrom(stats,fitted.values)
+importFrom(stats,coefficients)
+importFrom(stats,coef)
+importFrom(stats,vcov)
+importFrom(stats,logLik)
+importFrom(stats,residuals)
+importFrom(stats,resid)
+importFrom(stats,anova)
+importFrom(zoo,as.zoo)
+export(modelData,
+    modelSignal,
+    Op,Lo,Hi,Cl,Vo,Ad,
+    OpCl,OpOp,ClCl,OpHi,OpLo,LoCl,HiCl,LoHi,
+    Delt,
+    Next,
+    Lag,
+#    lags2,
+    periodReturn,
+    dailyReturn,weeklyReturn,monthlyReturn,quarterlyReturn,annualReturn,
+    allReturns,
+    tradeModel,
+#    saveModels,
+#    loadModels,
+	period.apply,
+#	returnBy,
+	breakpoints,
+#	importKM,
+#	tR.kmgmdh,
+	specifyModel,
+	getModelData,
+#    stripModelData,
+#    predictModel,
+    getSymbols,
+    getSymbols.MySQL,
+    getSymbols.yahoo,
+    showSymbols,
+    removeSymbols,
+    saveSymbols,
+    fittedModel,
+	buildModel,
+    is.quantmod,
+    is.quantmodResults,
+    as.quantmod.OHLC)
+export(setSymbolLookup)
+export(getSymbolLookup)
+#export(tradeLog)
+#export(gainloss)
+S3method(Next,zoo)
+S3method(Next,numeric)
+S3method(Next,data.frame)
+S3method(Next,quantmod.OHLC)
+S3method(Lag,default)
+S3method(Lag,numeric)
+S3method(Lag,data.frame)
+S3method(Lag,zoo)
+S3method(Lag,quantmod.OHLC)
+S3method(formula,quantmod)
+S3method(fitted,quantmod)
+S3method(fitted.values,quantmod)
+S3method(coef,quantmod)
+S3method(coefficients,quantmod)
+S3method(logLik,quantmod)
+S3method(vcov,quantmod)
+S3method(residuals,quantmod)
+S3method(resid,quantmod)
+S3method(anova,quantmod)
+S3method(plot,quantmod)
+S3method(plot,quantmodResults)
+S3method(as.zoo,data.frame)
+S3method(as.zoo,quantmod.OHLC)
+S3method(as.quantmod.OHLC,data.frame)
+S3method(as.quantmod.OHLC,zoo)
+S3method(as.quantmod.OHLC,quantmod.OHLC)
+#S3method('[',quantmod.OHLC)
+S3method(periodReturn,zoo)
+S3method(periodReturn,quantmod.OHLC)
+#S3method(predict,kmgmdh)
+S3method(predictModel,default)
+S3method(predictModel,nnet)
+S3method(predictModel,mars)
+S3method(predictModel,polymars)
+S3method(predictModel,lars)
+S3method(predictModel,rpart)
+S3method(predictModel,tree)
+S3method(predictModel,randomForest)
+export(weekdays.zoo,weeks,months.zoo,quarters.zoo,years)
+S3method(weeks,zoo)
+S3method(weekdays,zoo)
+S3method(months,zoo)
+S3method(quarters,zoo)
+S3method(years,zoo)
+exportClass(quantmod)
+exportClass(quantmodResults,quantmodReturn)
+exportClass(tradeLog)
+#exportClass(kmgmdh)
+exportMethods(show,summary,'fittedModel<-')
