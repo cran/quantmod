@@ -12,6 +12,7 @@ function(x)
 `as.zoo.data.frame`<-
 function(x,row.date=TRUE,...)
 {
+    #really need to test order - ???how?
     if(row.date) {
         zoo(x,as.Date(rownames(x)),...)
     }
@@ -81,7 +82,7 @@ function(x,
 function(x,i,j,drop=TRUE,...)
 {
   class(x) <- "zoo"
-  x <- x[i,j,drop=TRUE,...]
+  x <- x[i,j,drop,...]
   class(x) <- c("quantmod.OHLC","zoo")
   x
 }

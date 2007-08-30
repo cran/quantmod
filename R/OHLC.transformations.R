@@ -1,80 +1,92 @@
 "Op" <-
 function(x)
 {
+  op <- grep('Open',colnames(x))
+  if(!identical(op,integer(0)))
     return(x[,grep('Open',colnames(x))])
 }
 
 "Hi" <-
 function(x)
 {
+  hi <- grep('High',colnames(x))
+  if(!identical(hi,integer(0)))
     return(x[,grep('High',colnames(x))])
 }
 
 "Lo" <-
 function(x)
 {
+  lo <- grep('Low',colnames(x))
+  if(!identical(lo,integer(0)))
     return(x[,grep('Low',colnames(x))])
 }
 
 "Cl" <-
 function(x)
 {
+  cl <- grep('Close',colnames(x))
+  if(!identical(cl,integer(0)))
     return(x[,grep('Close',colnames(x))])
 }
 
 "Vo" <-
 function(x)
 {
+  vo <- grep('Volume',colnames(x))
+  if(!identical(vo,integer(0)))
     return(x[,grep('Volume',colnames(x))])
 }
 
 "Ad" <-
 function(x)
 {
+  ad <- grep('Adjusted',colnames(x))
+  if(!identical(ad,integer(0)))
     return(x[,grep('Adjusted',colnames(x))])
 }
 
 "OpCl" <-
 function(x)
 {
-    return(quantmod::Delt(Op(x),Cl(x)))
+    return(Delt(Op(x),Cl(x)))
 }
 
 "OpOp" <-
 function(x)
 {
-    return(quantmod::Delt(Op(x)))
+    return(Delt(Op(x)))
 }
 
 "ClCl" <-
 function(x)
 {
-    return(quantmod::Delt(Cl(x)))
+    return(Delt(Cl(x)))
 }
 "OpLo" <-
 function(x)
 {
-    return(quantmod::Delt(Op(x),Lo(x)))
+    return(Delt(Op(x),Lo(x)))
 }
 "OpHi" <-
 function(x)
 {
-    return(quantmod::Delt(Op(x),Hi(x)))
+    return(Delt(Op(x),Hi(x)))
 }
 "LoHi" <-
 function(x)
 {
-    return(quantmod::Delt(Lo(x),Hi(x)))
+    return(Delt(Lo(x),Hi(x)))
 }
 "LoCl" <-
 function(x)
 {
-    return(quantmod::Delt(Lo(x),Cl(x)))
+    return(Delt(Lo(x),Cl(x)))
 }
 "HiCl" <-
 function(x)
 {
-    return(quantmod::Delt(Hi(x),Cl(x)))
+    return(Delt(Hi(x),Cl(x)))
 }
 "Next" <-
 function(x,k=1)
@@ -182,4 +194,79 @@ function(x1,x2=NULL,k=0,type=c('log','arithmetic'))
     } else {
         (x2-Lag(x1,k))/Lag(x1,k)
     }
+}
+`to.period` <-
+function(x,period=months,...)
+{
+  UseMethod('to.period')
+}
+
+`to.period.quantmod.OHLC` <-
+function(x,period,...) {
+  bp <- breakpoints(x,period,TRUE)
+  date <- index(x)[bp]
+  op <- as.numeric(Op(x)[bp+1][-length(bp)])
+  hi <- period.apply(Hi(x),bp,max)
+  lo <- period.apply(Lo(x),bp,min)
+  cl <- as.numeric(Cl(x)[bp])
+  vo <- NULL
+  has.Vo <- grep('Volume',colnames(x))
+  if(!identical(has.Vo,integer(0)))
+    vo <- period.apply(Vo(x),bp,sum)
+
+  ad <- NULL
+  has.Ad <- grep('Adjusted',colnames(x))
+  if(!identical(has.Ad,integer(0)))
+    ad <- as.numeric(Ad(x)[bp])
+
+  x.out <- zoo(cbind(op,hi,lo,cl,vo,ad),date)
+  colnames(x.out) <- colnames(x)
+  class(x.out) <- class(x)
+  x.out
+}
+
+`to.period.zoo` <-
+function(x,period,name=NULL,...)
+{
+  if(is.null(name)) name <- deparse(substitute(x))
+  if(NCOL(x)==1) {
+    # for single dimension (or no?) data 
+    bp <- breakpoints(x,period,TRUE)
+    date <- index(x)[bp]
+    x.out <- period.apply(x,bp,
+               function(k) c(as.numeric(first(k)),
+                             max(k),min(k),as.numeric(last(k))))
+    x.zoo <- zoo(matrix(x.out,ncol=4,byrow=TRUE),date)
+    colnames(x.zoo) <- paste(name,c("Open","High","Low","Close"),sep='.')
+    class(x.zoo) <- c('quantmod.OHLC','zoo')
+    x.zoo
+  }
+  else {
+    stop("'x' must be a single column or of class 'quantmod.OHLC'")
+  }
+}
+
+`to.weekly` <-
+function(x)
+{
+  name <- deparse(substitute(x))
+  to.period(x,weeks,name)
+}
+`to.monthly` <-
+function(x)
+{
+  name <- deparse(substitute(x))
+  to.period(x,months,name)
+}
+`to.quarterly` <-
+function(x)
+{
+  name <- deparse(substitute(x))
+  to.period(x,quarters,name)
+}
+`to.yearly` <-
+function(x)
+{
+  name <- deparse(substitute(x))
+  to.period(x,years,name)
 }
