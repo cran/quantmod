@@ -1,4 +1,5 @@
 #import(methods)
+useDynLib(quantmod)
 importFrom(graphics,plot)
 importFrom(stats,predict)
 importFrom(stats,lag)
@@ -12,15 +13,36 @@ importFrom(stats,residuals)
 importFrom(stats,resid)
 importFrom(stats,anova)
 importFrom(zoo,as.zoo)
+#export(ohlcz,ohlcq)
+export(period.prod,period.sum,period.max,period.min)
+#export(.chob,write.chob,get.chob,release.chob)
+export(.chob)
+export(.chart.theme,chartTheme)
+export(listTA,setTA,unsetTA)
+export(addVo,addExpiry)
+export(addSMA,addEMA,addWMA,addDEMA,addEVWMA,addZLEMA)
+export(addSMI)
+export(addRSI)
+export(addROC)
+export(addWPR)
+export(addSAR)
+export(addMACD)
+export(addBBands)
 export(modelData,
     modelSignal,
     Op,Lo,Hi,Cl,Vo,Ad,
     OpCl,OpOp,ClCl,OpHi,OpLo,LoCl,HiCl,LoHi,
+    seriesHi,seriesLo,
+    is.OHLC,has.Op,has.Cl,has.Hi,has.Lo,has.Vo,has.Ad,has.OHLC,
     Delt,
     Next,
     Lag,
+    options.expiry,futures.expiry,
     to.period,
+    to.minutes,to.minutes3,to.minutes5,to.minutes10,to.minutes15,to.minutes30,
+    to.hourly,to.daily,
     to.weekly,to.monthly,to.quarterly,to.yearly,
+    nseconds,nminutes,nhours,ndays,nweekdays,nweeks,nmonths,nquarters,nyears,
     periodicity,
     periodReturn,
     dailyReturn,weeklyReturn,monthlyReturn,quarterlyReturn,annualReturn,
@@ -30,18 +52,21 @@ export(modelData,
 #    loadModels,
 	period.apply,
     apply.weekly,
+    apply.daily,
     apply.monthly,
     apply.quarterly,
     apply.yearly,
     first,
     last,
-#	returnBy,
 	breakpoints,
 	specifyModel,
 	getModelData,
 #    predictModel,
+    getQuote,
     getSymbols,
     getSymbols.MySQL,
+    getSymbols.SQLite,
+    getSymbols.mysql,
     getSymbols.FRED,
     getSymbols.yahoo,
     getSymbols.oanda,
@@ -50,6 +75,8 @@ export(modelData,
     getSymbols.RData,
     getSymbols.google,
     getSymbols.oanda,
+    getFX,
+    getMetals,
     oanda.currencies,
     showSymbols,
     removeSymbols,
@@ -70,13 +97,18 @@ export(chartSeries)
 export(barChart)
 export(lineChart)
 export(candleChart)
-export(matchChart)
-S3method(chartSeries,zoo)
-S3method(chartSeries,timeSeries)
+S3method(seriesHi,default)
+S3method(seriesHi,ts)
+S3method(seriesLo,default)
+S3method(seriesLo,ts)
+S3method(print,periodicity)
 S3method(to.period,quantmod.OHLC)
 S3method(to.period,zoo)
+S3method(to.period,timeSeries)
 S3method(first,default)
 S3method(last,default)
+S3method(last,zoo)
+S3method(first,zoo)
 S3method(Next,zoo)
 S3method(Next,numeric)
 S3method(Next,data.frame)
@@ -97,6 +129,7 @@ S3method(residuals,quantmod)
 S3method(resid,quantmod)
 S3method(anova,quantmod)
 S3method(plot,quantmod)
+S3method(plot,chobTA)
 S3method(plot,quantmodResults)
 S3method(as.zoo,data.frame)
 S3method(as.zoo,quantmod.OHLC)
@@ -107,7 +140,6 @@ S3method('[',quantmod.OHLC)
 S3method(periodReturn,zoo)
 S3method(periodReturn,quantmod.OHLC)
 S3method(periodReturn,quantmodResults)
-#S3method(predict,kmgmdh)
 S3method(predictModel,default)
 S3method(predictModel,nnet)
 S3method(predictModel,mars)
@@ -116,14 +148,27 @@ S3method(predictModel,lars)
 S3method(predictModel,rpart)
 S3method(predictModel,tree)
 S3method(predictModel,randomForest)
+export(seconds,minutes,hours,minutes3,minutes5,minutes10,minutes15,minutes30,days)
 export(weekdays.zoo,weeks,months.zoo,quarters.zoo,years)
+export(weekdays.timeSeries,weeks,months.timeSeries,quarters.timeSeries,years)
+S3method(days,timeSeries)
 S3method(weeks,zoo)
+S3method(weeks,timeSeries)
+S3method(minutes,zoo)
+S3method(seconds,zoo)
+S3method(hours,zoo)
+S3method(days,zoo)
+S3method(days,timeSeries)
 S3method(weekdays,zoo)
+S3method(weekdays,timeSeries)
 S3method(months,zoo)
+S3method(months,timeSeries)
 S3method(quarters,zoo)
+S3method(quarters,timeSeries)
 S3method(years,zoo)
+S3method(years,timeSeries)
 exportClass(quantmod)
 exportClass(quantmodResults,quantmodReturn)
 exportClass(tradeLog)
-#exportClass(kmgmdh)
+exportClass(chob,chobTA)
 exportMethods(show,summary,'fittedModel<-')

@@ -81,8 +81,22 @@ function(x,
 `[.quantmod.OHLC`<-
 function(x,i,j,drop=TRUE,...)
 {
+  original.cols <- ncol(x)
+  original.names <- colnames(x)
   class(x) <- "zoo"
-  x <- x[i,j,drop,...]
-  class(x) <- c("quantmod.OHLC","zoo")
+  if(missing(i)) i <- 1:nrow(x)
+  if(missing(j)) {
+    x <- x[i=i,drop=drop,...]
+    class(x) <- c("quantmod.OHLC","zoo")
+    j <- 1:original.cols
+  } else {
+    x <- x[i=i,j=j,drop=drop,...]
+    if(is.null(dim(x)))
+      dim(x) <- c(NROW(x),NCOL(x))
+    if(ncol(x)==original.cols)
+      class(x) <- c("quantmod.OHLC","zoo")
+  }
+  if(!is.null(dim(x)))
+    colnames(x) <- original.names[j]
   x
 }

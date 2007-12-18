@@ -7,8 +7,11 @@ function(Symbols=NULL,
          warnings=TRUE,
          src="yahoo",
          symbol.lookup=TRUE,
+         auto.assign=TRUE,
          ...)  {
       importDefaults("getSymbols")
+      if(!auto.assign && length(Symbols)>1)
+        stop("must use auto.assign=TRUE for multiple Symbols requests")
       if(symbol.lookup && missing(src)) {
         # if src is specified - override symbol.lookup
         symbols.src <- getOption('getSymbols.sources')
@@ -41,7 +44,8 @@ function(Symbols=NULL,
       if(reload.Symbols) {
         Symbols <- c(Symbols, old.Symbols)[unique(names(c(Symbols,old.Symbols)))]
       }
-
+      if(!auto.assign && length(Symbols) > 1)
+        stop("must use auto.assign=TRUE when reloading multiple Symbols")
       if(!is.null(Symbols)) {
         #group all Symbols by source
         Symbols <- as.list(unlist(lapply(unique(as.character(Symbols)),
@@ -58,12 +62,19 @@ function(Symbols=NULL,
                                            #return.class=return.class,
                                            #reload.Symbols=reload.Symbols,
                                            verbose=verbose,warnings=warnings,
+                                           auto.assign=auto.assign,
                                            ...))
+          if(!auto.assign)
+            return(symbols.returned)
           for(each.symbol in symbols.returned) all.symbols[[each.symbol]]=symbol.source 
         }
+        req.symbols <- names(all.symbols)
         all.symbols <- c(all.symbols,old.Symbols)[unique(names(c(all.symbols,old.Symbols)))]
-        assign('.getSymbols',all.symbols,env);
-        invisible(return(env))
+        if(auto.assign) {
+          assign('.getSymbols',all.symbols,env);
+          return(req.symbols)
+        }
+        #invisible(return(env))
       } else {
         warning('no Symbols specified')
       }
@@ -89,6 +100,7 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
      default.to <- to
 
      if(missing(verbose)) verbose <- FALSE
+     if(missing(auto.assign)) auto.assign <- TRUE
      yahoo.URL <- "http://chart.yahoo.com/table.csv?"
      for(i in 1:length(Symbols)) {
        return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -108,8 +120,9 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
        
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
-       if(verbose) cat("downloading ",Symbols.name,".....")
-       fr <- read.csv(paste(yahoo.URL,
+       if(verbose) cat("downloading ",Symbols.name,".....\n\n")
+       tmp <- tempfile()
+       download.file(paste(yahoo.URL,
                            "s=",Symbols.name,
                            "&a=",from.m,
                            "&b=",sprintf('%.2d',from.d),
@@ -119,45 +132,22 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
                            "&f=",to.y,
                            "&g=d&q=q&y=0",
                            "&z=",Symbols.name,"&x=.csv",
-                           sep=''))
+                           sep=''),destfile=tmp,quiet=!verbose)
+       fr <- read.csv(tmp)
+       unlink(tmp)
        if(verbose) cat("done.\n")
        fr <- zoo(fr[,-1],as.Date(fr[,1]))
        colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
                              c('Open','High','Low','Close','Volume','Adjusted'),
                              sep='.')
-       if('quantmod.OHLC' %in% return.class) {
-         class(fr) <- c('quantmod.OHLC','zoo')
-       } else
-       if('zoo' %in% return.class) {
-         fr
-       }
-       if('ts' %in% return.class) {
-         fr <- as.ts(fr)
-       } else
-       if('data.frame' %in% return.class) {
-         fr <- as.data.frame(fr)
-       } else
-       if('its' %in% return.class) {
-         if("package:its" %in% search() || require("its", quietly=TRUE)) {
-           index(fr) <- as.POSIXct(index(fr))
-           fr <- its::as.its(fr)
-         } else {
-           warning(paste("'its' from package 'its' could not be loaded:",
-                         " 'zoo' class returned"))
-         }
-       } else 
-       if('timeSeries' %in% return.class) {
-         if("package:fCalendar" %in% search() || require("fCalendar",quietly=TRUE)) {
-           fr <- as.timeSeries(fr)
-         } else {
-           warning(paste("'timeSeries' from package 'fCalendar' could not be loaded:",
-                   " 'zoo' class returned"))
-         }
-       }
+       fr <- convert.time.series(fr=fr,return.class=return.class)
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
-       assign(Symbols[[i]],fr,env)
+       if(auto.assign)
+         assign(Symbols[[i]],fr,env)
      }
-     return(Symbols)
+     if(auto.assign)
+       return(Symbols)
+     return(fr)
 }
 # }}}
 
@@ -176,6 +166,7 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
         assign(var, list(...)[[var]], this.env)
      }
      if(missing(verbose)) verbose <- FALSE
+     if(missing(auto.assign)) auto.assign <- TRUE
      google.URL <- "http://finance.google.com/finance/historical?"
      from.y <- as.numeric(strsplit(as.character(from),'-',)[[1]][1])
      from.m <- as.numeric(strsplit(as.character(from),'-',)[[1]][2])
@@ -186,8 +177,9 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
      for(i in 1:length(Symbols)) {
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
-       if(verbose) cat("downloading ",Symbols.name,".....")
-       fr <- read.csv(paste(google.URL,
+       if(verbose) cat("downloading ",Symbols.name,".....\n\n")
+       tmp <- tempfile()
+       download.file(paste(google.URL,
                            "q=",Symbols.name,
                            "&startdate=",month.abb[from.m],
                            "+",sprintf('%.2d',from.d),
@@ -196,7 +188,9 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
                            "+",sprintf('%.2d',to.d),
                            ",+",to.y,
                            "&output=csv",
-                           sep=''))
+                           sep=''),destfile=tmp,quiet=!verbose)
+       fr <- read.csv(tmp)
+       unlink(tmp)
        if(verbose) cat("done.\n")
        fr <- fr[nrow(fr):1,] #google data is backwards
        if(fix.google.bug) {
@@ -212,68 +206,41 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
        colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
                              c('Open','High','Low','Close','Volume'),
                              sep='.')
-       if('quantmod.OHLC' %in% return.class) {
-         class(fr) <- c('quantmod.OHLC','zoo')
-       } else
-       if('zoo' %in% return.class) {
-         fr
-       }
-       if('ts' %in% return.class) {
-         fr <- as.ts(fr)
-       } else
-       if('data.frame' %in% return.class) {
-         fr <- as.data.frame(fr)
-       } else
-       if('its' %in% return.class) {
-         if("package:its" %in% search() || require("its", quietly=TRUE)) {
-           index(fr) <- as.POSIXct(index(fr))
-           fr <- its::as.its(fr)
-         } else {
-           warning(paste("'its' from package 'its' could not be loaded:",
-                         " 'zoo' class returned"))
-         }
-       } else 
-       if('timeSeries' %in% return.class) {
-         if("package:fCalendar" %in% search() || require("fCalendar",quietly=TRUE)) {
-           fr <- as.timeSeries(fr)
-         } else {
-           warning(paste("'timeSeries' from package 'fCalendar' could not be loaded:",
-                   " 'zoo' class returned"))
-         }
-       }
+       fr <- convert.time.series(fr=fr,return.class=return.class)
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
-       assign(Symbols[[i]],fr,env)
+       if(auto.assign)
+         assign(Symbols[[i]],fr,env)
      }
-     return(Symbols)
+     if(auto.assign)
+       return(Symbols)
+     return(fr)
 }
 # }}}
 
-# getSymbols.MySQL {{{
-"getSymbols.MySQL" <- function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
-                               db.fields=c('date','o','h','l','c','v','a'),
+# getSymbols.SQLite {{{
+"getSymbols.SQLite" <- function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
+                               db.fields=c('row_names','Open','High',
+                                           'Low','Close','Volume','Adjusted'),
                                field.names = NULL,
-                               user=NULL,password=NULL,dbname=NULL,
+                               dbname=NULL,
+                               POSIX = TRUE,
                                ...) {
-     importDefaults("getSymbols.MySQL")
+     importDefaults("getSymbols.SQLite")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
      if(missing(verbose)) verbose <- FALSE
+     if(missing(auto.assign)) auto.assign <- TRUE
         if('package:DBI' %in% search() || require('DBI',quietly=TRUE)) {
-          if('package:RMySQL' %in% search() || require('RMySQL',quietly=TRUE)) {
-          } else { warning(paste("package:",dQuote("RMySQL"),"cannot be loaded" )) }
+          if('package:RSQLite' %in% search() || require('RSQLite',quietly=TRUE)) {
+          } else { warning(paste("package:",dQuote("RSQLite"),"cannot be loaded" )) }
         } else {
           stop(paste("package:",dQuote('DBI'),"cannot be loaded."))
         }
-        if(is.null(user) || is.null(password) || is.null(dbname)) {
-          stop(paste(
-              'At least one connection argument (',sQuote('user'),
-              sQuote('password'),sQuote('dbname'),
-              ") is not set"))
-        }
-        con <- dbConnect(MySQL(),user=user,password=password,dbname=dbname)
+        drv <- dbDriver("SQLite")
+        con <- dbConnect(drv,dbname=dbname)
         db.Symbols <- dbListTables(con)
         if(length(Symbols) != sum(Symbols %in% db.Symbols)) {
           missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
@@ -282,13 +249,24 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
         }
         for(i in 1:length(Symbols)) {
             if(verbose) {
-                cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''))
+                cat(paste('Loading ',Symbols[[i]],
+                    paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),
+                    sep=''))
             }
-            query <- paste("SELECT ",paste(db.fields,collapse=',')," FROM ",Symbols[[i]]," ORDER BY date")
+            query <- paste("SELECT ",
+                           paste(db.fields,collapse=','),
+                           " FROM ",Symbols[[i]],
+                           " ORDER BY row_names")
             rs <- dbSendQuery(con, query)
             fr <- fetch(rs, n=-1)
             #fr <- data.frame(fr[,-1],row.names=fr[,1])
-            fr <- zoo(fr[,-1],order.by=as.Date(fr[,1]))
+            if(POSIX) {
+              d <- as.numeric(fr[,1])
+              class(d) <- c("POSIXt","POSIXct")
+              fr <- zoo(fr[,-1],order.by=d)
+            } else {
+              fr <- zoo(fr[,-1],order.by=as.Date(as.numeric(fr[,1])))
+            }
             colnames(fr) <- paste(Symbols[[i]],
                                   c('Open','High','Low','Close','Volume','Adjusted'),
                                   sep='.')
@@ -321,12 +299,72 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
                         " 'zoo' class returned"))
               }
             }
-            assign(Symbols[[i]],fr,env)
+            if(auto.assign)
+              assign(Symbols[[i]],fr,env)
             if(verbose) cat('done\n')
         }
         dbDisconnect(con)
-        return(Symbols)
+        if(auto.assign)
+          return(Symbols)
+        return(fr)
+}
+"getSymbols.sqlite" <- getSymbols.SQLite
+# }}}
 
+# getSymbols.MySQL {{{
+"getSymbols.MySQL" <- function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
+                               db.fields=c('date','o','h','l','c','v','a'),
+                               field.names = NULL,
+                               user=NULL,password=NULL,dbname=NULL,
+                               ...) {
+     importDefaults("getSymbols.MySQL")
+     this.env <- environment()
+     for(var in names(list(...))) {
+        # import all named elements that are NON formals
+        assign(var, list(...)[[var]], this.env)
+     }
+     if(missing(verbose)) verbose <- FALSE
+     if(missing(auto.assign)) auto.assign <- TRUE
+        if('package:DBI' %in% search() || require('DBI',quietly=TRUE)) {
+          if('package:RMySQL' %in% search() || require('RMySQL',quietly=TRUE)) {
+          } else { warning(paste("package:",dQuote("RMySQL"),"cannot be loaded" )) }
+        } else {
+          stop(paste("package:",dQuote('DBI'),"cannot be loaded."))
+        }
+        if(is.null(user) || is.null(password) || is.null(dbname)) {
+          stop(paste(
+              'At least one connection argument (',sQuote('user'),
+              sQuote('password'),sQuote('dbname'),
+              ") is not set"))
+        }
+        con <- dbConnect(MySQL(),user=user,password=password,dbname=dbname)
+        db.Symbols <- dbListTables(con)
+        if(length(Symbols) != sum(Symbols %in% db.Symbols)) {
+          missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
+                warning(paste('could not load symbol(s): ',paste(missing.db.symbol,collapse=', ')))
+                Symbols <- Symbols[Symbols %in% db.Symbols]
+        }
+        for(i in 1:length(Symbols)) {
+            if(verbose) {
+                cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''))
+            }
+            query <- paste("SELECT ",paste(db.fields,collapse=',')," FROM ",Symbols[[i]]," ORDER BY date")
+            rs <- dbSendQuery(con, query)
+            fr <- fetch(rs, n=-1)
+            #fr <- data.frame(fr[,-1],row.names=fr[,1])
+            fr <- zoo(fr[,-1],order.by=as.Date(fr[,1]))
+            colnames(fr) <- paste(Symbols[[i]],
+                                  c('Open','High','Low','Close','Volume','Adjusted'),
+                                  sep='.')
+            fr <- convert.time.series(fr=fr,return.class=return.class)
+            if(auto.assign)
+              assign(Symbols[[i]],fr,env)
+            if(verbose) cat('done\n')
+        }
+        dbDisconnect(con)
+        if(auto.assign)
+          return(Symbols)
+        return(fr)
 }
 "getSymbols.mysql" <- getSymbols.MySQL
 # }}}
@@ -341,13 +379,18 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
         assign(var, list(...)[[var]], this.env)
      }
      if(missing(verbose)) verbose <- FALSE
+     if(missing(auto.assign)) auto.assign <- TRUE
      FRED.URL <- "http://research.stlouisfed.org/fred2/series"
      for(i in 1:length(Symbols)) {
-       if(verbose) cat("downloading ",Symbols[[i]],".....")
-       fr <- read.csv(paste(FRED.URL,"/",
+       if(verbose) cat("downloading ",Symbols[[i]],".....\n\n")
+       tmp <- tempfile()
+       download.file(paste(FRED.URL,"/",
                             Symbols[[i]],"/",
                             "downloaddata/",
-                            Symbols[[i]],".csv",sep=""))
+                            Symbols[[i]],".csv",sep=""),
+                            destfile=tmp,quiet=!verbose)
+       fr <- read.csv(tmp,na.string=".")
+       unlink(tmp)
        if(verbose) cat("done.\n")
        fr <- zoo(fr[,-1],as.Date(fr[,1]))
        dim(fr) <- c(NROW(fr),1)
@@ -379,12 +422,66 @@ function(Symbols,env,return.class=c('quantmod.OHLC','zoo'),
          }
        }
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
-       assign(Symbols[[i]],fr,env)
+       if(auto.assign)
+         assign(Symbols[[i]],fr,env)
      }
-     return(Symbols)
+     if(auto.assign)
+       return(Symbols)
+     return(fr)
 } #}}}
 
 "getSymbols.cache" <- function() {}
+
+# getFX {{{
+`getFX` <-
+function(Currencies,from='2007-01-01',to=Sys.Date(),
+         env=.GlobalEnv,
+         verbose=FALSE,warning=TRUE,
+         auto.assign=TRUE,...) {
+  importDefaults("getFX")
+  if(!auto.assign && length(Currencies) > 1)
+    stop("must use auto.assign=TRUE for multiple currency requests")
+  #src <- c('oanda','FRED')[pmatch(src,c('oanda','FRED'))[1]]
+  # parse Symbols
+  # make symbols conform to service naming conventions
+  # e.g. USD/JPY for oanda
+  #
+  #      DEXUSJP for FRED
+  #
+  #if(src[1]=="oanda") {
+  getSymbols.oanda(Symbols=Currencies,from=from,to=to,
+                   env=env,verbose=verbose,warning=warning,
+                   auto.assign=auto.assign,...)
+  #} else {
+  #  getSymbols.FRED(Symbols=Currencies,env=env,verbose=verbose,warning=warning,...)
+  #}  
+}
+#}}}
+
+# getMetals {{{
+`getMetals` <-
+function(Metals,from='2007-01-01',to=Sys.Date(),
+         base.currency="USD",env=.GlobalEnv,
+         verbose=FALSE,warning=TRUE,
+         auto.assign=TRUE,...) {
+  importDefaults("getMetals")
+  metals <- c("XAU-GOLD","XPD-PALLADIUM","XPT-PLATINUM","XAG-SILVER")
+  metals <- metals[sapply(Metals, function(x) grep(x,metals,ignore.case=TRUE))]
+  metals <- as.character(sapply(metals,
+                   function(x) {
+                     paste(strsplit(x,'-')[[1]][1],base.currency,sep="/")
+                   }))
+  getSymbols.oanda(Symbols=metals,from=from,to=to,auto.assign=auto.assign,
+                   env=env,verbose=verbose,warning=warning,...) 
+}
+#}}}
+
+# getRates {{{
+`getRates` <-
+function() {
+
+}
+#}}}
 
 # getSymbols.csv {{{
 "getSymbols.csv" <-
@@ -404,6 +501,7 @@ function(Symbols,env,
   default.extension <- extension
 
   if(missing(verbose)) verbose <- FALSE
+  if(missing(auto.assign)) auto.assign <- TRUE
 
   for(i in 1:length(Symbols)) {
     return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -463,9 +561,12 @@ function(Symbols,env,
       }
     }
     Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
-    assign(Symbols[[i]],fr,env)
+    if(auto.assign)
+      assign(Symbols[[i]],fr,env)
     }
-    return(Symbols)
+    if(auto.assign)
+      return(Symbols)
+    return(fr)
 }
 #}}}
 
@@ -488,6 +589,7 @@ function(Symbols,env,
   default.extension <- extension
 
   if(missing(verbose)) verbose <- FALSE
+  if(missing(auto.assign)) auto.assign <- TRUE
 
   for(i in 1:length(Symbols)) {
     return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -551,20 +653,48 @@ function(Symbols,env,
       }
     }
     Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
-    assign(Symbols[[i]],fr,env)
+    if(auto.assign)
+      assign(Symbols[[i]],fr,env)
     }
-    return(Symbols)
+    if(auto.assign)
+      return(Symbols)
+    return(fr)
 }
 #}}}
 
+# getSymbols.RData {{{
 `getSymbols.RData` <- getSymbols.rda
+# }}}
 
+# getSymbols.IBrokers {{{
+"getSymbols.IBrokers" <- function() {}
+# }}}
+
+# getSymbols.RBloomberg {{{
+"getSymbols.RBloomberg" <- function() {}
+# }}}
+
+# getSymbols.url {{{
 "getSymbols.url" <- function() {}
+# }}}
 
+# getSymbols.freelunch {{{
 "getSymbols.freelunch" <- function() {}
+# }}}
 
+# getSymbols.RODBC {{{
 "getSymbols.RODBC" <- function() {}
+# }}}
 
+# getSymbols.RSQLite {{{
+"getSymbols.RSQLite" <- function() {}
+# }}}
+
+# getSymbols.ROracle {{{
+"getSymbols.ROracle" <- function() {}
+# }}}
+
+# getSymbols.oanda {{{
 `getSymbols.oanda` <-
 function(Symbols,env,return.class='zoo',
          from='2007-01-01',
@@ -577,11 +707,15 @@ function(Symbols,env,return.class='zoo',
         assign(var, list(...)[[var]], this.env)
      }
 
+     if(!auto.assign && length(Symbols) > 1)
+       stop("must use auto.assign=TRUE for multiple Symbols requests")
      default.return.class <- return.class
      default.from <- from
      default.to <- to
 
      if(missing(verbose)) verbose <- FALSE
+     if(missing(auto.assign)) auto.assign <- TRUE
+
      oanda.URL <- "http://www.oanda.com/convert/fxhistory?lang=en&"
      for(i in 1:length(Symbols)) {
        return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -592,7 +726,7 @@ function(Symbols,env,return.class='zoo',
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- ifelse(is.null(to),default.to,to)
    
-       if(as.Date(to)-as.Date(from) > 2000) stop("oanda limits data to 2000 days")
+       if(as.Date(to)-as.Date(from) > 1999) stop("oanda limits data to 2000 days")
        # automatically break larger requests into equal sized smaller request at some point
        # for now just let it remain
 
@@ -608,13 +742,13 @@ function(Symbols,env,return.class='zoo',
        }
 
        if(verbose) cat("downloading ",Symbols.name,".....")
-       con <- url(paste(oanda.URL,from.date,to.date,"exch=",currency.pair[1],
+       tmp <- tempfile()
+       download.file(paste(oanda.URL,from.date,to.date,"exch=",currency.pair[1],
                        "&expr2=",currency.pair[2],
                        "&margin_fixed=0&SUBMIT=Get+Table&format=CSV&redirected=1",
-                       sep=""))
-       open(con)
-       fr <- readLines(con)
-       close(con)
+                       sep=""),destfile=tmp,quiet=!verbose)
+       fr <- readLines(tmp)
+       unlink(tmp)
        fr <- unlist(strsplit(
                     gsub("<PRE>|</PRE>","",fr[(grep("PRE",fr)[1]):(grep("PRE",fr)[2])]),","))
 
@@ -622,20 +756,38 @@ function(Symbols,env,return.class='zoo',
        fr <- zoo(as.numeric(fr[1:length(fr)%%2!=1]),as.Date(fr[1:length(fr)%%2==1],"%m/%d/%Y"))
        dim(fr) <- c(length(fr),1)
        colnames(fr) <- gsub("/",".",Symbols[[i]])
+       fr <- convert.time.series(fr=fr,return.class=return.class)
+       Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]])) 
+       if(auto.assign)
+         assign(Symbols[[i]],fr,env)
+     }
+     if(auto.assign)
+       return(Symbols)
+     return(fr)
+}#}}}
 
+# convert.time.series {{{
+`convert.time.series` <- function(fr,return.class) {
+       if('quantmod.OHLC' %in% return.class) {
+         class(fr) <- c('quantmod.OHLC','zoo')
+         return(fr)
+       } else
        if('zoo' %in% return.class) {
-         fr
+         return(fr)
        }
        if('ts' %in% return.class) {
          fr <- as.ts(fr)
+         return(fr)
        } else
        if('data.frame' %in% return.class) {
          fr <- as.data.frame(fr)
+         return(fr)
        } else
        if('its' %in% return.class) {
          if("package:its" %in% search() || require("its", quietly=TRUE)) {
            index(fr) <- as.POSIXct(index(fr))
            fr <- its::as.its(fr)
+           return(fr)
          } else {
            warning(paste("'its' from package 'its' could not be loaded:",
                          " 'zoo' class returned"))
@@ -644,17 +796,13 @@ function(Symbols,env,return.class='zoo',
        if('timeSeries' %in% return.class) {
          if("package:fCalendar" %in% search() || require("fCalendar",quietly=TRUE)) {
            fr <- as.timeSeries(fr)
+           return(fr)
          } else {
            warning(paste("'timeSeries' from package 'fCalendar' could not be loaded:",
                    " 'zoo' class returned"))
          }
        }
-       Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]])) 
-       assign(Symbols[[i]],fr,env)
-     }
-     return(Symbols)
-
-}
+}#}}}
 
 # removeSymbols {{{
 "removeSymbols" <- 

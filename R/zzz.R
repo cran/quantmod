@@ -1,8 +1,9 @@
 ".onLoad" <- function(lib,pkg) {
   cat("quantmod: Quantitative Financial Modelling Framework\n\n")
-  cat("Version 0-2.5\n")
+  cat("Version 0.3-0\n")
   cat("http://www.quantmod.com\n\n")
 }
+
 setOldClass("zoo");
 setOldClass("Date");
 setClass("quantmod",representation(
@@ -15,7 +16,7 @@ setClass("quantmod",representation(
                     symbols="character",
                     product="character",
                     price.levels="zoo",
-                    training.data="Date",
+                    training.data="ANY",
                     build.date="character",
                     fitted.model="ANY",
                     model.data="zoo",
@@ -30,7 +31,7 @@ setClass("quantmodReturn",representation(
                     accuracy="zoo",
                     directional.accuracy="list",
                     dist.of.returns="list",
-                    returnsBy="zoo"
+                    returnsBy="ANY"
                     )
         );
 setClass("quantmodResults",representation(
