@@ -2,7 +2,8 @@
 `chartSeries` <-
 function(x,
          type=c("auto","candlesticks","matchsticks","bars","line"),
-         show.grid=TRUE,name=deparse(substitute(x)),
+         subset=NULL,
+         show.grid=TRUE,name=NULL,
          time.scale=NULL,
          TA=c(addVo()),
          line.type="l",
@@ -10,7 +11,10 @@ function(x,
          xlab="time",ylab="price",theme=chartTheme("black"),
          up.col,dn.col,color.vol=TRUE,multi.col=FALSE,...
          ) {
-  if(is(x,'timeSeries')) x <- zoo(x@Data,as.POSIXct(x@positions))
+  if(!is.xts(x)) x <- as.xts(x)
+
+  indexClass(x) <- "POSIXct"
+
   if(is.OHLC(x)) {
     Opens <- as.numeric(Op(x))
     Highs <- as.numeric(Hi(x))
@@ -83,7 +87,7 @@ function(x,
       is <-sapply(FUNS[8:1],
                   function(y) { do.call(y,list(x)) })
       cl <- substring(names(is)[which(is > gt & is < lt)],2)[1]
-      bp <- breakpoints(x,cl,TRUE)
+      bp <- endpoints(x,cl)
       bp
     }
   bp <- ticks(x)
@@ -96,13 +100,14 @@ function(x,
  
   chob <- new("chob")
   chob@call <- match.call(expand=TRUE)
+  if(is.null(name)) name <- as.character(match.call()$x)
   chob@name <- name
   chob@type <- chart[1]
 
   chob@xrange <- c(1,NROW(x))
   if(is.OHLC(x)) {
     chob@yrange <- c(min(Lo(x),na.rm=TRUE),max(Hi(x),na.rm=TRUE))
-  } else chob@yrange <- range(x,na.rm=TRUE)
+  } else chob@yrange <- range(x[,1],na.rm=TRUE)
   
 
 
@@ -205,6 +210,7 @@ function(x,
   # spacing requirements for chart type
   chart.options <- c("auto","candlesticks","matchsticks","line","bars")
   chart <- chart.options[pmatch(type,chart.options)]
+  chart <- 'bars'
   if(chart[1]=="auto") {
     chart <- ifelse(NROW(x) > 300,"matchsticks","candlesticks")
   }

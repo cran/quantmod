@@ -1,3 +1,26 @@
+#
+#  At present all TA functionality is in this file
+#  
+#  TA implemented and charting optimized:
+#
+#    BBands,CCI,CMF,CMO,DPO,EMA,Envelope,MACD,Momentum,
+#    RSI,SMA,SMI,Vo,WPR
+
+#  TA implemented, charting not completed/optimized:
+#
+#    ADX,ATR,DEMA,EVWMA,Expiry,Lines,ROC,SAR,TRIX,WMA,ZLEMA
+
+#  TA not yet implemented (and some may not be)
+#
+#    CLV,CMD,OBV,KST,TDI,WHF,Aroon,ChAD,ChVol,WilliamsAD,
+#    Points, Stoch, SD, ...??? 
+
+# addTA {{{
+`addTA` <-
+function(ta,...) {
+  plot(do.call(paste('add',ta,sep=''),list(...)))
+}#}}}
+
 # setTA {{{
 `setTA` <-
 function(type=c('chartSeries','barChart','candleChart')) {
@@ -24,7 +47,7 @@ function(dev) {
    lchob <- get.current.chob() 
   if(!lchob@show.vol) return()
   x <- as.matrix(eval(lchob@passed.args$x))
-  Volumes <- x[,5]
+  Volumes <- Vo(x)
   max.vol <- max(Volumes)
   vol.scale <- list(100, "100s")
   if (max.vol > 10000) 
@@ -35,11 +58,38 @@ function(dev) {
     vol.scale <- list(1e+05, "100,000s")
   if (max.vol > 1e+07) 
     vol.scale <- list(1e+06, "millions")
+  
+  if(lchob@color.vol & is.OHLC(x)) {
+    # calculate colors for bars, if applicable.
+    Opens  <- Op(x)
+    Closes <- Cl(x)
+    if(lchob@multi.col) {
+      # colored bars - 4 color
+      last.Closes <- as.numeric(Lag(Closes))
+      last.Closes[1] <- Closes[1]
+      bar.col <- ifelse(Opens < Closes,
+                        ifelse(Opens > last.Closes,
+                               lchob@colors$dn.up.col,
+                               lchob@colors$up.up.col),
+                        ifelse(Opens < last.Closes,
+                               lchob@colors$dn.dn.col,
+                               lchob@colors$up.dn.col))
+    } else {
+      # colored bars - 2 color
+      bar.col <- ifelse(Opens < Closes,
+                        lchob@colors$up.col,
+                        lchob@colors$dn.col)
+    }
+      # 1 color bars
+  } else bar.col <- ifelse(!is.null(lchob@colors$Vo.bar.col),
+                           lchob@colors$Vo.bar.col,lchob@colors$border)
+  border.col <- ifelse(is.null(lchob@colors$border),
+                       bar.col,lchob@colors$border)
 
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
 
-  chobTA@TA.values <- cbind(x[,c(1,4)],Volumes/vol.scale[[1]])
+  chobTA@TA.values <- Volumes/vol.scale[[1]]
   chobTA@name <- "chartVo"
   chobTA@call <- match.call()
   
@@ -52,8 +102,11 @@ function(dev) {
                         bp=lchob@bp,
                         vol.scale=vol.scale,
                         x.labels=lchob@x.labels,
+                        bar.col=bar.col,border.col=border.col,
                         time.scale=lchob@time.scale)
+
   chobTA@params$thin <- ifelse(lchob@type %in% c('bars','matchsticks'),TRUE,FALSE)
+
   if(is.null(sys.call(-1))) {
     TA <- lchob@passed.args$TA
     lchob@passed.args$TA <- c(TA,chobTA)
@@ -70,9 +123,7 @@ function(x) {
   # if volume is to be plotted, do so here
     # scale volume - vol.divisor
     if(class(x) != "chobTA") stop("chartVo requires a suitable chobTA object")
-    Opens <- x@TA.values[,1]
-    Closes <- x@TA.values[,2]
-    Volumes <- x@TA.values[,3]
+    Volumes <- x@TA.values
 
     spacing <- x@params$spacing
     width <- x@params$width
@@ -89,29 +140,9 @@ function(x) {
          type='n',axes=FALSE,ann=FALSE)
     grid(NA,NULL,col=x@params$colors$grid.col)
     x.pos <- 1 + spacing * (1:length(Volumes) - 1)
-    if(!x@params$color.vol | !is.null(x@params$colors$Vo.bar.col)) {
-      bar.col <- ifelse(!is.null(x@params$colors$Vo.bar.col),
-                        x@params$colors$Vo.bar.col,
-                        x@params$colors$border)
-    } else
-    if (x@params$multi.col) {
-      last.Closes <- as.numeric(quantmod::Lag(Closes))
-      last.Closes[1] <- Closes[1]
-      bar.col <- ifelse(Opens < Closes, 
-                        ifelse(Opens > last.Closes, 
-                               x@params$colors$dn.up.col,
-                               x@params$colors$up.up.col),
-                        ifelse(Opens < last.Closes,
-                               x@params$colors$dn.dn.col,
-                               x@params$colors$up.dn.col))
-    } else {
-      bar.col <- ifelse(Opens < Closes, 
-                        x@params$colors$up.col,
-                        x@params$colors$dn.col)
-    }
 
-    # if border=NULL use color of bar
-    border.col <- ifelse(is.null(x@params$colors$border),bar.col,x@params$colors$border)
+    bar.col <- x@params$bar.col
+    border.col <- x@params$border.col
 
     if(x@params$thin) {
       # plot thin volume bars if appropriate
@@ -120,7 +151,13 @@ function(x) {
       rect(x.pos-spacing/3,0,x.pos+spacing/3,Volumes,
            col=bar.col,border=border.col)
     }
-    title(ylab=paste("volume (",vol.scale[[2]],")"))
+
+    text(0, max(Volumes,na.rm=TRUE) * .9, "Volume:",pos=4)
+
+    text(0, max(Volumes,na.rm=TRUE) * .9,
+         paste("\n\n\n",format(last(Volumes)*vol.scale[[1]],big.mark=','), sep = ""), 
+         pos = 4,col=last(bar.col))
+
     axis(2)
     box(col=x@params$colors$fg.col)
 } # }}}
@@ -134,11 +171,21 @@ function(x) {
   x <- as.matrix(eval(lchob@passed.args$x))
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
-  if(length(ma.type) !=3)
-    ma.type <- rep(ma.type[1],3)
-  smi <- SMI(cbind(Hi(x),Lo(x),Cl(x)),n=n,ma.slow=list(ma.type[1],n=slow),
-             ma.fast=list(ma.type[2],n=fast),
-             ma.sig=list(ma.type[3],n=signal))
+
+  xx <- if(is.OHLC(x)) {
+    cbind(Hi(x),Lo(x),Cl(x))
+  } else if(is.null(dim(x))) {
+    x
+  } else {
+    x[,1] 
+  }
+
+  smi <- SMI(xx, n=n, nFast=fast,
+             nSlow=slow, nSig=signal, maType=ma.type)
+
+# subset here
+# smi <- smi[lchob@sindex]
+
   chobTA@TA.values <- smi
   chobTA@name <- "chartSMI"
   chobTA@call <- match.call()
@@ -175,13 +222,46 @@ function(x) {
     multi.col <- x@params$multi.col
     color.vol <- x@params$color.vol
 
+# subset thinking ...
+#
+# could subset the TA.values here (or in addSMI more likely)
+# this way the calculation is performed on the entire set, but
+# the smaller view is printed.
+# 
+#   smi <- x@TA.values[x@sindex] ???
+#
     smi <- x@TA.values
-    plot(x.range,seq(min(smi[,1]*.975,na.rm=TRUE),max(smi[,1]*1.05,na.rm=TRUE),length.out=length(x.range)),
-         type='n',axes=FALSE,ann=FALSE)
+
+    y.range <- seq(-max(abs(smi[,1]), na.rm = TRUE), max(abs(smi[,1]), 
+                   na.rm = TRUE), length.out = length(x.range)) * 1.05
+
+    plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
+
     grid(NA,NULL,col=x@params$colors$grid.col)
-    lines(seq(1,length(x.range),by=spacing),smi[,1],col='#0033CC',lwd=2,type='l')
-    lines(seq(1,length(x.range),by=spacing),smi[,2],col='#BFCFFF',lwd=1,lty='dotted',type='l')
-    #title(ylab=paste('SMI(',paste(param,collapse=','),')',sep=''))
+
+    COLOR <- "#0033CC"
+    SIGNAL <- "#BFCFFF"
+
+    lines(seq(1,length(x.range),by=spacing),
+          smi[,1],col=COLOR,lwd=1,type='l')
+    lines(seq(1,length(x.range),by=spacing),
+          smi[,2],col=SIGNAL,lwd=1,lty='dotted',type='l')
+
+    text(0, last(y.range) * .9,
+         paste("Stochastic Momentum Index (",
+         paste(x@params$n,x@params$fast,x@params$slow,x@params$signal,sep=','),
+         "):", sep = ""), 
+         pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\nSMI: ",sprintf("%.3f",last(smi[,1])), sep = ""), col = COLOR, 
+        pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\n\n\nSignal: ",
+              sprintf("%.3f",last(smi[,2])), sep = ""), col = SIGNAL, 
+        pos = 4)
+
     axis(2)
     box(col=x@params$colors$fg.col)
 } # }}}
@@ -196,7 +276,16 @@ function(x) {
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
 
-  wpr <- WPR(cbind(Hi(x),Lo(x),Cl(x)),n=n)
+  xx <- if(is.OHLC(x)) {
+    cbind(Hi(x),Lo(x),Cl(x))
+  } else if(is.null(dim(x))) {
+    x
+  } else {
+    x[,1] 
+  }
+
+
+  wpr <- WPR(xx,n=n)
 
   chobTA@TA.values <- as.numeric(wpr)
   chobTA@name <- "chartWPR"
@@ -235,13 +324,671 @@ function(x) {
 
     n <- x@params$n
     wpr <- x@TA.values
-    plot(x.range,seq(min(wpr*.975,na.rm=TRUE),max(wpr*1.05,na.rm=TRUE),length.out=length(x.range)),
+
+    y.range <- seq(-0.1, max(abs(wpr), 
+                   na.rm = TRUE), length.out = length(x.range)) * 1.05
+
+    # create appropriately scaled empty plot area
+    plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
+
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    COLOR <- "#0033CC"
+
+    lines(seq(1,length(x.range),by=spacing),wpr,col=COLOR,lwd=1,type='l')
+
+    text(0, last(y.range)*.9,
+         paste("Williams %R (", x@params$n,"):", sep = ""), 
+        pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\n",sprintf("%.3f",last(wpr)), sep = ""), col = COLOR, 
+        pos = 4)
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addCMF {{{
+`addCMF` <- function(n=20) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  xx <- if(is.OHLC(x)) {
+    cbind(Hi(x),Lo(x),Cl(x))
+  } else stop("CMF only applicaple to HLC series")
+
+  cmf <- CMF(xx,Vo(x),n=n)
+
+  chobTA@TA.values <- cmf
+  chobTA@name <- "chartCMF"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartCMF {{{
+`chartCMF` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    cmf <- x@TA.values
+
+    y.range <- seq(-max(abs(cmf), na.rm = TRUE), max(abs(cmf), 
+                   na.rm = TRUE), length.out = length(x.range)) * 1.05
+
+    plot(x.range,y.range,
          type='n',axes=FALSE,ann=FALSE)
     grid(NA,NULL,col=x@params$colors$grid.col)
-    lines(seq(1,length(x.range),by=spacing),wpr,col='#0033CC',lwd=2,type='l')
+
+    xx <- seq(1,length(x.range),by=spacing)
+    cmf.positive <- ifelse(cmf >= 0,cmf,0)
+    cmf.negative <- ifelse(cmf <  0,cmf,0)
+
+    polygon(c(xx,rev(xx)),c(cmf.positive,rep(0,length(cmf))),col=x@params$colors$up.col)
+    polygon(c(xx,rev(xx)),c(cmf.negative,rep(0,length(cmf))),col=x@params$colors$dn.col)
+
+    abline(h=0,col="#999999")
+
+    text(0, last(y.range)*.9,
+         paste("Chaikin Money Flow (", x@params$n,"):", sep = ""), 
+        pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\n",sprintf("%.3f",last(cmf)), sep = ""), 
+        col = ifelse(last(cmf) > 0,x@params$colors$up.col,x@params$colors$dn.col), 
+        pos = 4)
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addCMO {{{
+`addCMO` <- function(n=14) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  #  needs to accept any arguments for x, not just close
+
+  xx <- if(has.Cl(x)) {
+    Cl(x)
+  } else if(is.null(dim(x))) {
+    x
+  } else {
+    x[,1] 
+  }
+
+  cmo <- CMO(xx,n=n)
+
+  chobTA@TA.values <- cmo
+  chobTA@name <- "chartCMO"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartCMO {{{
+`chartCMO` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    cmo <- x@TA.values
+
+    y.range <- seq(-max(abs(cmo), na.rm = TRUE), max(abs(cmo), 
+                   na.rm = TRUE), length.out = length(x.range)) * 1.05
+
+    plot(x.range,y.range,
+         type='n',axes=FALSE,ann=FALSE)
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    COLOR="#0033CC"
+
+    abline(h=0,col="#666666",lwd=1,lty='dotted')
+    lines(seq(1,length(x.range),by=spacing),cmo,col=COLOR,lwd=1,type='l')
+
+    text(0, last(y.range)*.9,
+         paste("Chande Momentum Oscillator (", x@params$n,"):", sep = ""), 
+        pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\n",sprintf("%.3f",last(cmo)), sep = ""), col = COLOR, 
+        pos = 4)
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addMomentum {{{
+`addMomentum` <- function(n=1) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  #  needs to accept any arguments for x, not just close
+
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  mom <- momentum(xx,n=n)
+
+  chobTA@TA.values <- mom
+  chobTA@name <- "chartMomentum"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartMomentum {{{
+`chartMomentum` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    mom <- x@TA.values
+
+    y.range <- seq(-max(abs(mom),na.rm=TRUE),max(abs(mom),na.rm=TRUE),
+                   length.out=length(x.range)) * 1.05
+    plot(x.range,y.range,
+         type='n',axes=FALSE,ann=FALSE)
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    COLOR <- "#0033CC"
+
+    abline(h=0,col="#666666",lwd=1,lty='dotted')
+
+    lines(seq(1,length(x.range),by=spacing),mom,col=COLOR,lwd=2,type='l')
+
+    text(0, last(y.range)*.9, 
+         paste("Momentum (", x@params$n, "):"),pos=4)
+
+    text(0, last(y.range)*.9,
+         paste("\n\n\n",sprintf("%.2f",last(mom)),sep=''),
+         col = COLOR, pos = 4)
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addCCI {{{
+`addCCI` <- function(n=20, maType="SMA", c=0.015) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  xx <- if(is.OHLC(x)) {
+    cbind(Hi(x),Lo(x),Cl(x))
+  } else x 
+
+  cci <- CCI(xx,n=n,maType=maType,c=c)
+
+  chobTA@TA.values <- cci
+  chobTA@name <- "chartCCI"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n,maType=maType,c=c)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartCCI {{{
+`chartCCI` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    cci <- x@TA.values
+
+    y.range <- seq(-max(abs(cci),na.rm=TRUE),
+                   max(abs(cci),na.rm=TRUE),
+                   length.out=length(x.range))*1.05
+    plot(x.range,y.range,
+         type='n',axes=FALSE,ann=FALSE)
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    usr <- par('usr')
+
+    # draw shading in -100:100 y-range 
+    rect(usr[1],-100,usr[2],100,col="#282828")
+
+    # fill upper and lower areas
+    xx <- seq(1,length(x.range),by=spacing)
+    cci.above <- ifelse(cci >=  100,cci, 100)
+    cci.below <- ifelse(cci <= -100,cci,-100)
+    
+    polygon(c(xx,rev(xx)),c(cci.above,rep(100,length(xx))),col="red")
+    polygon(c(xx,rev(xx)),c(cci.below,rep(-100,length(xx))),col="red")
+
+    # draw CCI
+    lines(seq(1,length(x.range),by=spacing),cci,col='red',lwd=1,type='l')
+
+    # draw dotted guide line at 0
+    abline(h=0,col='#666666',lwd=1,lty='dotted')
+
+    # add indicator name and last value
+    text(0, last(y.range)*.9,
+         paste("Commodity Channel Index (", x@params$n, ",",
+         x@params$c,"):",sep=''),pos=4)
+    text(0, last(y.range)*.9,
+         paste("\n\n\n",sprintf("%.2f",last(cci)),sep=''), col = 'red', 
+         pos = 4)
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addADX {{{
+`addADX` <- function(n=14, maType="EMA", wilder=TRUE) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  if(!is.OHLC(x)) stop("only applicable to HLC series")
+
+  adx <- ADX(cbind(Hi(x),Lo(x),Cl(x)),n=n,maType=maType,wilder=wilder)
+
+  chobTA@TA.values <- adx
+  chobTA@name <- "chartADX"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n,maType=maType,wilder=wilder)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartADX {{{
+`chartADX` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    adx <- x@TA.values
+    plot(x.range,seq(min(adx[,4]*.975,na.rm=TRUE),
+         max(adx[,4]*1.05,na.rm=TRUE),length.out=length(x.range)),
+         type='n',axes=FALSE,ann=FALSE)
+    grid(NA,NULL,col=x@params$colors$grid.col)
+    # draw DIp
+    lines(seq(1,length(x.range),by=spacing),adx[,1],col='green',lwd=1,type='l')
+    # draw DIn
+    lines(seq(1,length(x.range),by=spacing),adx[,2],col='red',lwd=1,type='l')
+    # draw ADX
+    lines(seq(1,length(x.range),by=spacing),adx[,4],col='blue',lwd=2,type='l')
+
+    # draw upper and lower guidelines
+    abline(h=20,col='#666666',lwd=1,lty='dotted')
+    abline(h=40,col='#666666',lwd=1,lty='dotted')
     #title(ylab=paste('SMI(',paste(param,collapse=','),')',sep=''))
     axis(2)
     box(col=x@params$colors$fg.col)
+} # }}}
+
+# addATR {{{
+`addATR` <- function(n=14, maType="EMA", wilder=TRUE) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  if(!is.OHLC(x)) stop("only applicable to HLC series")
+
+  atr <- ATR(cbind(Hi(x),Lo(x),Cl(x)),n=n,maType=maType,wilder=wilder)
+
+  chobTA@TA.values <- atr
+  chobTA@name <- "chartATR"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n,maType=maType,wilder=wilder)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartATR {{{
+`chartATR` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    atr <- x@TA.values
+    plot(x.range,seq(min(atr[,2]*.975,na.rm=TRUE),
+         max(atr[,2]*1.05,na.rm=TRUE),length.out=length(x.range)),
+         type='n',axes=FALSE,ann=FALSE)
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    # draw ADX
+    lines(seq(1,length(x.range),by=spacing),atr[,2],col='blue',lwd=2,type='l')
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addTRIX {{{
+`addTRIX` <- function(n=20, signal=9, maType="EMA", percent=TRUE) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  trix <- TRIX(xx,n=n,nSig=signal,maType=maType,percent=percent)
+
+  chobTA@TA.values <- trix
+  chobTA@name <- "chartTRIX"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n,signal=signal,maType=maType,percent=percent)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartTRIX {{{
+`chartTRIX` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+
+    trix <- x@TA.values
+
+    plot(x.range,seq(min(trix[,1]*.975,na.rm=TRUE),
+         max(trix[,1]*1.05,na.rm=TRUE),length.out=length(x.range)),
+         type='n',axes=FALSE,ann=FALSE)
+
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    # draw TRIX
+    lines(seq(1,length(x.range),by=spacing),trix[,1],col='green',lwd=1,type='l')
+    # draw Signal
+    lines(seq(1,length(x.range),by=spacing),trix[,2],col='#999999',lwd=1,type='l')
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+} # }}}
+
+# addDPO {{{
+`addDPO` <- function(n=10, maType="EMA", shift=n/2+1, percent=FALSE) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- TRUE
+ 
+  # should really allow for _any_ series to be used, like MA (FIXME)
+
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  dpo <- DPO(xx,n=n,maType=maType,shift=shift,percent=percent)
+
+  chobTA@TA.values <- dpo
+  chobTA@name <- "chartDPO"
+  chobTA@call <- match.call()
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n,maType=maType,shift=shift,percent=percent)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartDPO {{{
+`chartDPO` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    n <- x@params$n
+    dpo <- x@TA.values
+
+    y.range <- seq(-max(abs(dpo), na.rm = TRUE), max(abs(dpo), 
+                   na.rm = TRUE), length.out = length(x.range)) * 1.05
+
+    plot(x.range,y.range,
+         type='n',axes=FALSE,ann=FALSE)
+    grid(NA,NULL,col=x@params$colors$grid.col)
+
+    xx <- seq(1,length(x.range),by=spacing)
+
+    dpo.tmp <- dpo
+    dpo.tmp[is.na(dpo)] <- 0
+    dpo.positive <- ifelse(dpo.tmp >= 0,dpo.tmp,0)
+    dpo.negative <- ifelse(dpo.tmp <  0,dpo.tmp,0)
+
+    polygon(c(xx,rev(xx)),c(dpo.positive,rep(0,length(dpo))),col=x@params$colors$up.col)
+    polygon(c(xx,rev(xx)),c(dpo.negative,rep(0,length(dpo))),col=x@params$colors$dn.col)
+
+    abline(h=0,col="#999999")
+
+    text(0, last(y.range)*.9,
+         paste("De-trended Price Oscillator (", x@params$n,"):", sep = ""), 
+        pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\n",sprintf("%.3f",last(na.omit(dpo))), sep = ""), 
+        col = ifelse(last(dpo) > 0,x@params$colors$up.col,x@params$colors$dn.col), 
+        pos = 4)
+
+    axis(2)
+    box(col=x@params$colors$fg.col)
+
+#    y.range <- seq(-max(abs(dpo), na.rm = TRUE), max(abs(dpo), 
+#        na.rm = TRUE), length.out = length(x.range)) * 1.05
+#    plot(x.range, y.range, type = "n", axes = FALSE, ann = FALSE)
+#
+#    grid(NA,NULL,col=x@params$colors$grid.col)
+#
+#    # draw DPO
+#    lines(seq(1,length(x.range),by=spacing),dpo,col='green',lwd=1,type='l')
+#
+#    #title(ylab=paste('SMI(',paste(param,collapse=','),')',sep=''))
+#    axis(2)
+#    box(col=x@params$colors$fg.col)
 } # }}}
 
 # addRSI {{{
@@ -254,12 +1001,12 @@ function(x) {
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
 
-  n.up <- n[1]; n.dn <- ifelse(length(n) > 1,n[2],n[1])
-  type.up <- type[1]; type.dn <- ifelse(length(type) > 1,type[2],type[1])
-  wilder.up <- wilder[1]; wilder.dn <- ifelse(length(wilder) > 1,wilder[2],wilder[1])
 
-  rsi <- RSI(Cl(x),ma.up=list(type.up,n=n.up,wilder=wilder.up),
-                     ma.down=list(type.dn,n=n.dn,wilder=wilder.dn))
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  rsi <- RSI(xx,n=n,maType=type,wilder=wilder)
   chobTA@TA.values <- rsi
   chobTA@name <- "chartRSI"
   chobTA@call <- match.call()
@@ -272,8 +1019,7 @@ function(x) {
                         bp=lchob@bp,
                         x.labels=lchob@x.labels,
                         time.scale=lchob@time.scale,
-                        n.up=n.up,n.dn=n.dn,type.up=type.up,type.dn=type.dn,
-                        wilder.up=wilder.up,wilder.dn=wilder.dn)
+                        n=n, wilder=wilder,maType=type)
   if(is.null(sys.call(-1))) {
     TA <- lchob@passed.args$TA
     lchob@passed.args$TA <- c(TA,chobTA)
@@ -298,12 +1044,25 @@ function(x) {
 
     param <- x@params$param; ma.type <- x@params$ma.type
     rsi <- x@TA.values
-    plot(x.range,seq(min(rsi*.975,na.rm=TRUE),max(rsi*1.05,na.rm=TRUE),length.out=length(x.range)),
-         type='n',axes=FALSE,ann=FALSE)
+
+    y.range <- seq(min(rsi,na.rm=TRUE)*.975,max(rsi,na.rm=TRUE)*1.05,
+                   length.out=length(x.range))
+
+    plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
+
     grid(NA,NULL,col=x@params$colors$grid.col)
+
     lines(seq(1,length(x.range),by=spacing),rsi,col='#0033CC',lwd=2,type='l')
     lines(seq(1,length(x.range),by=spacing),rsi,col='#BFCFFF',lwd=1,lty='dotted',type='l')
-    #title(ylab=paste('RSI(',paste(c(n.up,collapse=','),')',sep=''))
+
+    text(0, last(y.range)*.9,
+         paste("Relative Strength Index (", x@params$n,"):", sep = ""), 
+         pos = 4)
+
+    text(0, last(y.range)*.9,
+         paste("\n\n\n",sprintf("%.3f",last(rsi)), sep = ""), col = '#0033CC', 
+         pos = 4)
+
     axis(2)
     box(col=x@params$colors$fg.col)
 } # }}}
@@ -318,7 +1077,14 @@ function(x) {
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
 
-  roc <- ROC(Cl(x),n=n,type=type,na=NA)
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  type <- match.arg(type)
+
+  roc <- ROC(xx,n=n,type=type,na=NA)
+
   chobTA@TA.values <- roc
   chobTA@name <- "chartROC"
   chobTA@call <- match.call()
@@ -365,20 +1131,31 @@ function(x) {
 } # }}}
 
 # addBBands {{{
-`addBBands` <- function(n=20,ma='SMA',sd=2,on=1) {
+`addBBands` <- function(n=20,ma='SMA',sd=2,draw='bands',on=-1) {
 
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  draw.options <- c('bands','percent','width')
+  draw <- draw.options[pmatch(draw,draw.options)]
 
   lchob <- get.current.chob()
   x <- as.matrix(eval(lchob@passed.args$x))
   chobTA <- new("chobTA")
-  chobTA@new <- FALSE
-
+  if(draw=='bands') {
+    chobTA@new <- FALSE
+    } else {
+      chobTA@new <- TRUE
+      on <- NULL
+  }
 
   x <- as.matrix(eval(lchob@passed.args$x))
 
-  bb <- bollingerBands(cbind(Hi(x),Lo(x),Cl(x)),ma=list(ma,n=n),sd=sd)
+  xx <- if(is.OHLC(x)) {
+    cbind(Hi(x),Lo(x),Cl(x))
+  } else x 
 
+  bb <- BBands(xx,n=n,maType=ma,sd=sd)
+  
   chobTA@TA.values <- bb
   chobTA@name <- "chartBBands"
   chobTA@call <- match.call()
@@ -392,7 +1169,8 @@ function(x) {
                         bp=lchob@bp,
                         x.labels=lchob@x.labels,
                         time.scale=lchob@time.scale,
-                        n=n,ma=ma,sd=sd)
+                        n=n,ma=ma,sd=sd,
+                        draw=draw)
   if(is.null(sys.call(-1))) {
     TA <- lchob@passed.args$TA
     lchob@passed.args$TA <- c(TA,chobTA)
@@ -415,11 +1193,171 @@ function(x) {
     multi.col <- x@params$multi.col
     color.vol <- x@params$color.vol
 
+    bband.col <- ifelse(!is.null(x@params$colors$BBands.col),
+                        x@params$colors$BBands.col,'red') 
+
+    # bband col vector
+    # lower.band, middle.band, upper.band, %b, bb.width
+    if(length(bband.col) == 1) # no user specified
+      bband.col <- c(bband.col,'grey',rep(bband.col,3))
+    
     param <- x@params$param; ma.type <- x@params$ma.type
+   
     bb <- x@TA.values
-    lines(seq(1,length(x.range),by=spacing),bb[,1],col='red',lwd=1,lty='dashed')
-    lines(seq(1,length(x.range),by=spacing),bb[,3],col='red',lwd=1,lty='dashed')
-    lines(seq(1,length(x.range),by=spacing),bb[,2],col='grey',lwd=1,lty='dotted')
+
+    if(x@params$draw == 'bands') {
+      # draw Bollinger Bands on price chart
+      if(x@on[1] > 0) {
+        lines(seq(1,length(x.range),by=spacing),
+              bb[,1],col=bband.col[1],lwd=1,lty='dashed')
+        lines(seq(1,length(x.range),by=spacing),
+              bb[,3],col=bband.col[3],lwd=1,lty='dashed')
+        lines(seq(1,length(x.range),by=spacing),
+              bb[,2],col=bband.col[2],lwd=1,lty='dotted')
+      } else {
+        xx <- seq(1,length(x.range),by=spacing)
+        polygon(c(xx,rev(xx)),
+                c(bb[,1],rev(bb[,3])),col='#282828',border=NA)
+        lines(seq(1,length(x.range),by=spacing),
+              bb[,1],col=bband.col[1],lwd=1,lty='dashed')
+        lines(seq(1,length(x.range),by=spacing),
+              bb[,3],col=bband.col[3],lwd=1,lty='dashed')
+        lines(seq(1,length(x.range),by=spacing),
+              bb[,2],col=bband.col[2],lwd=1,lty='dotted')
+      }
+     
+      # return the text to be pasted
+      txt <- list()
+      txt[[1]] <- list(text=paste("Bollinger Bands (",
+                     paste(x@params$n,x@params$sd,sep=","),") [Upper/Lower]: ",
+                     sprintf("%.3f",last(bb[,3])),"/",
+                     sprintf("%.3f",last(bb[,1])), sep = ""), 
+                     col = bband.col[3]) 
+      invisible(txt)
+    } else 
+      if(x@params$draw == 'percent') {
+        # draw %B in new frame
+        y.range <- seq(min(bb[,4], na.rm = TRUE) * .9,
+                        max(abs(bb[,4]), na.rm = TRUE) * 1.05,
+                        length.out = length(x.range))
+        plot(x.range, y.range, type = "n", axes = FALSE, ann = FALSE)
+        grid(NA,NULL,col=x@params$colors$grid.col)
+
+        lines(seq(1,length(x.range),by=spacing), bb[,4],
+              col=bband.col[4],lwd=1)
+        
+        text(0,last(y.range) * .9, paste("Bollinger %b (",
+             paste(x@params$n,x@params$sd,sep=","), "): ",
+             sep=""), pos=4)
+        text(0,last(y.range) * .9, paste("\n\n\n",
+             sprintf("%.3f",last(bb[,4])), sep = ""),
+             pos=4, col=bband.col[4])
+
+        axis(2)
+        box(col = x@params$colors$fg.col)
+        
+      } else {
+        # draw width in new frame
+        # (high band - low band) / middle band
+        bbw <- (bb[,3] - bb[,1]) / bb[,2]
+        
+        y.range <- seq(min(bbw, na.rm = TRUE) * .9,
+                        max(abs(bbw), na.rm = TRUE) * 1.05,
+                        length.out = length(x.range))
+        plot(x.range, y.range, type = "n", axes = FALSE, ann = FALSE)
+        grid(NA,NULL,col=x@params$colors$grid.col)
+
+        lines(seq(1,length(x.range),by=spacing), bbw,
+              col=bband.col[5],lwd=1)
+        
+        text(0,last(y.range) * .9, paste("Bollinger Band Width (",
+             paste(x@params$n,x@params$sd,sep=","), "): ",
+             sep=""), pos=4)
+        text(0,last(y.range) * .9, paste("\n\n\n",
+             sprintf("%.3f",last(bbw)), sep = ""),
+             pos=4, col=bband.col[5])
+
+        axis(2)
+        box(col = x@params$colors$fg.col)
+      }
+} # }}}
+
+# addEnvelope {{{
+`addEnvelope` <- function(n=20,p=2.5,maType='SMA',...,on=1) {
+
+  stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
+
+  lchob <- get.current.chob()
+  x <- as.matrix(eval(lchob@passed.args$x))
+  chobTA <- new("chobTA")
+  chobTA@new <- FALSE
+
+  x <- as.matrix(eval(lchob@passed.args$x))
+
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  ma <- do.call(maType,list(xx,n=n,...))
+  mae <- cbind(ma*(1-p/100),ma,ma*(1+p/100))
+  
+  chobTA@TA.values <- mae
+  chobTA@name <- "chartEnvelope"
+  chobTA@call <- match.call()
+  chobTA@on <- on
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        n=n,p=p,maType=maType)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} #}}}
+# chartEnvelope {{{
+`chartEnvelope` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+
+    mae <- x@TA.values
+    if(x@on[1] > 0) {
+      lines(seq(1,length(x.range),by=spacing),mae[,1],col='blue',lwd=1,lty='dotted')
+      lines(seq(1,length(x.range),by=spacing),mae[,3],col='blue',lwd=1,lty='dotted')
+      #lines(seq(1,length(x.range),by=spacing),mae[,2],col='grey',lwd=1,lty='dotted')
+    } else {
+      xx <- seq(1,length(x.range),by=spacing)
+      polygon(c(xx,rev(xx)), c(mae[,1],rev(mae[,3])),col='#282828',border=NA)
+      lines(seq(1,length(x.range),by=spacing),mae[,1],col='blue',lwd=1,lty='dotted')
+      lines(seq(1,length(x.range),by=spacing),mae[,3],col='blue',lwd=1,lty='dotted')
+      #lines(seq(1,length(x.range),by=spacing),mae[,2],col='grey',lwd=1,lty='dotted')
+    }
+   
+    # return the text to be pasted
+    txt <- list()
+    txt[[1]] <- list(text=paste("Moving Ave. Envelope (",
+                   paste(x@params$n,x@params$p,sep=","),") [Upper/Lower]: ",
+                   sprintf("%.3f",last(mae[,3])),"/",
+                   sprintf("%.3f",last(mae[,1])), sep = ""), col = 'blue') 
+    invisible(txt)
+
 } # }}}
 
 # addSAR {{{
@@ -434,6 +1372,8 @@ function(x) {
 
 
   x <- as.matrix(eval(lchob@passed.args$x))
+
+  if(!is.OHLC(x)) stop("SAR requires HL series") 
 
   sar <- SAR(cbind(Hi(x),Lo(x)),accel=accel)
 
@@ -487,19 +1427,14 @@ function(x) {
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
 
-    macd <- 
-    function (x,fast=12,slow=26,signal=9,type='EMA') 
-    {
-        if(length(type) != 3) type <- rep(type[1],3) 
-        oscillator <- MACD(x, list(type[1], n = fast), list(type[2], 
-            n = slow), list(type[3], n = signal))
-        return(oscillator)
-    }
-
   col <- if(missing(col)) col <- c('#999999','#777777',
                               '#BBBBBB','#FF0000')
 
-  macd <- macd(Cl(x),fast=fast,slow=slow,signal=signal,type=type)
+  xx <- if(is.OHLC(x)) {
+    Cl(x)
+  } else x 
+
+  macd <- MACD(xx,nFast=fast,nSlow=slow,nSig=signal,maType=type)
   
   chobTA@TA.values <- macd
   chobTA@name <- "chartMACD"
@@ -511,6 +1446,7 @@ function(x) {
                         bp=lchob@bp,
                         x.labels=lchob@x.labels,
                         time.scale=lchob@time.scale,
+                        fast=fast,slow=slow,signal=signal,
                         col=col,histo=histogram
                         )
   if(is.null(sys.call(-1))) {
@@ -534,22 +1470,109 @@ function(x) {
 
     col <- x@params$col
     macd <- x@TA.values
-    macd.min <- min(macd[,1],macd[,2],macd[,1]-macd[,2],na.rm=TRUE)
-    macd.max <- max(macd[,1],macd[,2],macd[,1]-macd[,2],na.rm=TRUE)
-    plot(x.range,seq(macd.min*.975,macd.max*1.05,length.out=length(x.range)),
-         type='n',axes=FALSE,ann=FALSE)
+
+    y.range <- seq(-max(abs(macd),na.rm=TRUE),max(abs(macd),na.rm=TRUE),
+                   length.out=length(x.range)) * 1.05
+
+    plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
+
     grid(NA,NULL,col=x@params$colors$grid.col)
+
     if(x@params$histo) {
       x.pos <- 1 + spacing * (1:NROW(macd) -1)
       cols <- ifelse((macd[,1]-macd[,2]) > 0, col[1],col[2])
       rect(x.pos - spacing/5,0,x.pos + spacing/5, macd[,1]-macd[,2],
            col=cols,border=cols)
     } 
-    lines(seq(1,length(x.range),by=spacing),macd[,1],col=col[3],lwd=2)
+
+    lines(seq(1,length(x.range),by=spacing),macd[,1],col=col[3],lwd=1)
     lines(seq(1,length(x.range),by=spacing),macd[,2],col=col[4],lwd=1,lty='dotted')
-    #title(ylab=paste('RSI(',paste(c(n.up,collapse=','),')',sep=''))
+
+    text(0, last(y.range)*.9,
+         paste("Moving Average Convergence Divergence (",
+         paste(x@params$fast,x@params$slow,x@params$signal,sep=','),"):", sep = ""), 
+         pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\nMACD: ",sprintf("%.3f",last(macd[,1])), sep = ""),
+        col = col[3],pos = 4)
+
+    text(0, last(y.range)*.9,
+        paste("\n\n\n\n\n\nSignal: ",sprintf("%.3f",last(macd[,2])), sep = ""),
+        col = col[4],pos = 4)
+
     axis(2)
     box(col=x@params$colors$fg.col)
+} # }}}
+
+# addLines {{{
+`addLines` <- function(x,h,v,on=1,overlay=TRUE,col='blue') {
+ 
+  if(missing(x)) x <- NULL
+  if(missing(h)) h <- NULL
+  if(missing(v)) v <- NULL
+
+  lchob <- get.current.chob()
+  chobTA <- new("chobTA")
+  chobTA@new <- !overlay
+
+  chobTA@TA.values <- NULL # single numeric vector
+  chobTA@name <- "chartLines"
+  chobTA@call <- match.call()
+  chobTA@on <- on # used for deciding when to draw...
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        bp=lchob@bp,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        col=col,h=h,x=x,v=v)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} # }}}
+# chartLines {{{
+`chartLines` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+ 
+    if(!is.null(x@params$x)) {
+      # draw lines given positions specified in x
+
+    }
+    if(!is.null(x@params$h)) {
+      # draw horizontal lines given positions specified in h
+      abline(h=x@params$h,col=x@params$col)
+#     if(length(x@params$h) > length(x@params$col)) {
+#       colors <- rep(col,length(x@params$h))
+#     } else colors <- x@params$col
+#     for(li in 1:length(x@params$h)) {
+#       lines(seq(1,length(x.range),by=spacing),
+#             rep(x@params$h[li],length(x.range)/spacing), col=colors[li])
+#     }
+    }
+    if(!is.null(x@params$v)) {
+      # draw vertical lines given positions specified in v
+
+      abline(v=(x@params$v-1)*spacing+1,col=x@params$col)
+    }
+
 } # }}}
 
 # addEMA {{{
@@ -561,9 +1584,13 @@ function(x) {
   chobTA <- new("chobTA")
   chobTA@new <- !overlay
 
+
   # get the appropriate data - from the approp. src
   if(on==1) {
     x <- as.matrix(eval(lchob@passed.args$x))
+
+    if(!is.OHLC(x) | missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -571,17 +1598,25 @@ function(x) {
     # get values from TA...
     which.TA <- which(sapply(lchob@passed.args$TA,function(x) x@new))
     target.TA <- eval(lchob@passed.args$TA[which.TA][on-1])[[1]]
+
     x <- as.matrix(target.TA@TA.values)
-    if(missing(with.col)) {
-      warning('missing "with.col" argument')
-      invisible(return())
-    }
+
+    if(missing(with.col)) with.col <- 1
+      
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
   }
 
-  chobTA@TA.values <- x.tmp # single numeric vector
+  ma.tmp <- NULL
+
+  for(i in 1:length(n)) {
+    ma <- EMA(x.tmp,n=n[i],wilder=wilder[1],
+              ratio=ratio[1])
+    ma.tmp <- cbind(ma.tmp,ma)     
+  }
+
+  chobTA@TA.values <- ma.tmp 
   chobTA@name <- "chartEMA"
   chobTA@call <- match.call()
   chobTA@on <- on # used for deciding when to draw...
@@ -617,13 +1652,15 @@ function(x) {
     multi.col <- x@params$multi.col
     color.vol <- x@params$color.vol
 
-    if(length(x@params$n) < length(x@params$col)) {
+    if(length(x@params$n) != length(x@params$col)) {
       colors <- 3:10
-    } else colors <- x@params$col
+    } else colors <- x@params$col 
  
+    chart.key <- list()
+
     for(li in 1:length(x@params$n)) {
-      ma <- EMA(x@TA.values,n=x@params$n[li],wilder=x@params$wilder,
-                ratio=x@params$ratio)
+      ma <- x@TA.values[,li]
+
       if(x@new) {
         par(new=TRUE)
         plot(x.range,seq(min(ma*.975),max(ma*1.05),length.out=length(x.range)),
@@ -633,7 +1670,14 @@ function(x) {
         box(col=x@params$colors$fg.col)
       }
       lines(seq(1,length(x.range),by=spacing),ma,col=colors[li],lwd=1,type='l')
+      chart.key[[li]] <- list(text=paste("EMA (",
+                   paste(x@params$n[li],sep=","),"): ",
+                   sprintf("%.3f",last(ma)),
+                   sep = ""), col = colors[li]) 
+
     }
+    invisible(chart.key)
+
 } # }}}
 
 # addSMA {{{
@@ -648,6 +1692,9 @@ function(x) {
   # get the appropriate data - from the approp. src
   if(on==1) {
     x <- as.matrix(eval(lchob@passed.args$x))
+
+    if(!is.OHLC(x) | missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -655,17 +1702,22 @@ function(x) {
     # get values from TA...
     which.TA <- which(sapply(lchob@passed.args$TA,function(x) x@new))
     target.TA <- eval(lchob@passed.args$TA[which.TA][on-1])[[1]]
+
     x <- as.matrix(target.TA@TA.values)
-    if(missing(with.col)) {
-      warning('missing "with.col" argument')
-      invisible(return())
-    }
+
+    if(missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
   }
+  ma.tmp <- NULL
+  for(i in 1:length(n)) {
+    ma <- SMA(x.tmp,n=n[i])
+    ma.tmp <- cbind(ma.tmp,ma)
+  }
 
-  chobTA@TA.values <- x.tmp # single numeric vector
+  chobTA@TA.values <- ma.tmp # single numeric vector
   chobTA@name <- "chartSMA"
   chobTA@call <- match.call()
   chobTA@on <- on # used for deciding when to draw...
@@ -701,12 +1753,14 @@ function(x) {
     multi.col <- x@params$multi.col
     color.vol <- x@params$color.vol
 
-    if(length(x@params$n) < length(x@params$col)) {
-      colors <- 3:10
+    if(length(x@params$n) != length(x@params$col)) {
+      colors <- c(4:10,3)
     } else colors <- x@params$col
- 
+
+    chart.key <- list() 
+
     for(li in 1:length(x@params$n)) {
-      ma <- SMA(x@TA.values,n=x@params$n[li])
+      ma <- x@TA.values[,li]
       if(x@new) {
         par(new=TRUE)
         plot(x.range,seq(min(ma*.975),max(ma*1.05),length.out=length(x.range)),
@@ -716,7 +1770,11 @@ function(x) {
         box(col=x@params$colors$fg.col)
       }
       lines(seq(1,length(x.range),by=spacing),ma,col=colors[li],lwd=1,type='l')
+      chart.key[[li]] <- list(text = paste("SMA (", paste(x@params$n[li], 
+            sep = ","), "): ", sprintf("%.3f", last(ma)), sep = ""), 
+            col = colors[li])
     }
+    invisible(chart.key)
 } # }}}
 
 # addWMA {{{
@@ -731,6 +1789,9 @@ function(x) {
   # get the appropriate data - from the approp. src
   if(on==1) {
     x <- as.matrix(eval(lchob@passed.args$x))
+
+    if(!is.OHLC(x) | missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -739,10 +1800,9 @@ function(x) {
     which.TA <- which(sapply(lchob@passed.args$TA,function(x) x@new))
     target.TA <- eval(lchob@passed.args$TA[which.TA][on-1])[[1]]
     x <- as.matrix(target.TA@TA.values)
-    if(missing(with.col)) {
-      warning('missing "with.col" argument')
-      invisible(return())
-    }
+
+    if(missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -814,6 +1874,9 @@ function(x) {
   # get the appropriate data - from the approp. src
   if(on==1) {
     x <- as.matrix(eval(lchob@passed.args$x))
+
+    if(!is.OHLC(x) | missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -822,10 +1885,9 @@ function(x) {
     which.TA <- which(sapply(lchob@passed.args$TA,function(x) x@new))
     target.TA <- eval(lchob@passed.args$TA[which.TA][on-1])[[1]]
     x <- as.matrix(target.TA@TA.values)
-    if(missing(with.col)) {
-      warning('missing "with.col" argument')
-      invisible(return())
-    }
+
+    if(missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -897,6 +1959,9 @@ function(x) {
   # get the appropriate data - from the approp. src
   if(on==1) {
     x <- as.matrix(eval(lchob@passed.args$x))
+
+    if(!is.OHLC(x) | missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- cbind(do.call(with.col,list(x)),Vo(x))
     } else x.tmp <- x[,with.col]
@@ -905,10 +1970,9 @@ function(x) {
     which.TA <- which(sapply(lchob@passed.args$TA,function(x) x@new))
     target.TA <- eval(lchob@passed.args$TA[which.TA][on-1])[[1]]
     x <- as.matrix(target.TA@TA.values)
-    if(missing(with.col)) {
-      warning('missing "with.col" argument')
-      invisible(return())
-    }
+
+    if(missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -981,6 +2045,9 @@ function(x) {
   # get the appropriate data - from the approp. src
   if(on==1) {
     x <- as.matrix(eval(lchob@passed.args$x))
+
+    if(!is.OHLC(x) | missing(with.col)) with.col <- 1
+
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -988,6 +2055,9 @@ function(x) {
     # get values from TA...
     which.TA <- which(sapply(lchob@passed.args$TA,function(x) x@new))
     target.TA <- eval(lchob@passed.args$TA[which.TA][on-1])[[1]]
+
+    if(missing(with.col)) with.col <- 1
+
     x <- as.matrix(target.TA@TA.values)
     if(missing(with.col)) {
       warning('missing "with.col" argument')
@@ -1109,12 +2179,14 @@ function(x) {
 # get.current.chob {{{
 `get.current.chob` <- function() {
   if(exists('chob',env=sys.frames()[[1]])) {
-    if(identical(sys.frames()[[1]],.GlobalEnv)) stop()
+    if(identical(sys.frames()[[1]],.GlobalEnv)) 
+      stop("why are you calling this directly?")
     lchob <- get('chob',env=sys.frames()[[1]])
   } else {
     gchob <- get.chob()
     #protect against NULL device or windows not drawn to yet
-    if(dev.cur()==1 || length(gchob) < dev.cur()) stop()
+    if(dev.cur()==1 || length(gchob) < dev.cur()) 
+      stop("improperly set or missing graphics device")
     current.chob <- which(sapply(gchob,
                                  function(x) {
                                    ifelse(class(x)=="chob" &&
@@ -1125,35 +2197,3 @@ function(x) {
   }
   return(lchob)
 } #}}}
-
-`zzzRSI` <-
-function (price, ma.up = list("EMA", n = 14, wilder = TRUE), 
-    ma.down = ma.up) 
-{
-    up <- momentum(price, n = 1)
-    dn <- ifelse(up < 0, abs(up), 0)
-    up <- ifelse(up > 0, up, 0)
-    mavg.up <- do.call(ma.up[[1]], c(list(up), ma.up[-1]))
-    mavg.dn <- do.call(ma.down[[1]], c(list(dn), ma.down[-1]))
-    rsi <- 100 * mavg.up/(mavg.up + mavg.dn)
-    return(rsi)
-}
-
-
-`zzzEMA` <-
-function (x, n = 10, wilder = FALSE) 
-{
-    x <- as.vector(x)
-    NAs <- ifelse(any(is.na(x)),length(which(is.na(x))),0)
-    x <- na.omit(x)
-    ema <- rep(NA, NROW(x))
-    if (wilder) 
-        ratio <- 1/n
-    else ratio <- 2/(n + 1)
-    ema[n] <- mean(x[1:n])
-    for (i in (n + 1):NROW(x)) {
-        ema[i] <- x[i] * ratio + ema[i - 1] * (1 - ratio)
-    }
-    return(c(rep(NA,NAs),ema))
-}
-
