@@ -9,11 +9,32 @@ function(x,
          line.type="l",
          bar.type="ohlc",
          xlab="time",ylab="price",theme=chartTheme("black"),
+         major.ticks='auto',minor.ticks=TRUE,
          up.col,dn.col,color.vol=TRUE,multi.col=FALSE,...
          ) {
+  sys.TZ <- Sys.getenv('TZ')
+  Sys.setenv(TZ='GMT')
+  on.exit(Sys.setenv(TZ=sys.TZ))
+
   if(!is.xts(x)) x <- as.xts(x)
 
   indexClass(x) <- "POSIXct"
+
+  if(!is.null(subset) & is.character(subset)) {
+    if(strsplit(subset,' ')[[1]][1] %in% c('first','last')) {
+      subsetvec <- strsplit(subset,' ')[[1]]
+      if(length(subsetvec) < 3) {
+        subset.n <- ifelse(length(subsetvec)==1,1L,as.numeric(subsetvec[2]))
+      } else {
+        subset.n <- paste(subsetvec[2:3],collapse=' ')
+      }
+      sub.index <- index(do.call(subsetvec[1],list(x,subset.n)))
+      xsubset <- which(index(x) %in% sub.index)
+    } else xsubset <- which(index(x) %in% index(x[subset]))  
+  } else xsubset <- 1:NROW(x)
+
+  xdata <- x
+  x <- x[xsubset]
 
   if(is.OHLC(x)) {
     Opens <- as.numeric(Op(x))
@@ -77,30 +98,35 @@ function(x,
     width <- 3
     if(NROW(x) > 60) width <- 1
   }
-  ticks <- function(x,gt=2,lt=30) {
-      nminutes15 <- function(x) {
-          length(breakpoints(x,minutes15,TRUE))-1
-        }
-      FUNS <-c('nseconds','nminutes','nminutes15','nhours',
-            'ndays','nweeks','nmonths',
-            'nyears')
-      is <-sapply(FUNS[8:1],
-                  function(y) { do.call(y,list(x)) })
-      cl <- substring(names(is)[which(is > gt & is < lt)],2)[1]
-      bp <- endpoints(x,cl)
-      bp
-    }
-  bp <- ticks(x)
-  # format the scale
-  x.labels <- format(index(x)[bp+1],"%n%b%n%Y")
-  if(time.scale=='weekly' | time.scale=='daily')
-    x.labels <- format(index(x)[bp+1],"%b %d%n%Y")
-  if(time.scale=='minute')
-    x.labels <- format(index(x)[bp+1],"%b %d%n%H:%M")
- 
+
+  ticks <- function(ival, major.ticks, gt = 2, lt = 30) {
+      tick.opts <- c("years", "months", "weeks", "days", "hours", 
+          "minutes", "seconds")
+      if (major.ticks %in% tick.opts) {
+          cl <- major.ticks[1]
+      }
+      else {
+          is <- sapply(tick.opts, function(y) {
+              length(endpoints(ival, y, 1)) - 1
+          })
+          cl <- names(is)[which(is > gt & is < lt)][1]
+      }
+      ep <- endpoints(ival, cl)
+      ep
+  }
+  ep <- ticks(x, major.ticks)
+  x.labels <- format(index(x)[ep + 1], "%n%b%n%Y")
+  if (time.scale == "weekly" | time.scale == "daily") 
+      x.labels <- format(index(x)[ep + 1], "%b %d%n%Y")
+  if (time.scale == "minute" | time.scale == "hourly") 
+      x.labels <- format(index(x)[ep + 1], "%b %d%n%H:%M")
+
   chob <- new("chob")
   chob@call <- match.call(expand=TRUE)
   if(is.null(name)) name <- as.character(match.call()$x)
+
+  chob@xdata <- xdata
+  chob@xsubset <- xsubset
   chob@name <- name
   chob@type <- chart[1]
 
@@ -110,7 +136,6 @@ function(x,
   } else chob@yrange <- range(x[,1],na.rm=TRUE)
   
 
-
   chob@color.vol <- color.vol
   chob@multi.col <- multi.col
   chob@show.vol <- show.vol
@@ -118,10 +143,11 @@ function(x,
   chob@line.type <- line.type
   chob@spacing <- spacing
   chob@width <- width
-  chob@bp <- bp
+  chob@bp <- ep
   chob@x.labels <- x.labels
   chob@colors <- theme
   chob@time.scale <- time.scale
+  chob@minor.ticks <- minor.ticks
 
   chob@length <- NROW(x)
 
@@ -153,6 +179,163 @@ function(x,
   write.chob(chob,chob@device)
   invisible(chob)
 } #}}}
+# zoomChart {{{
+`zoomChart` <-
+function(subset=NULL) {
+  sys.TZ <- Sys.getenv('TZ')
+  Sys.setenv(TZ='GMT')
+  on.exit(Sys.setenv(TZ=sys.TZ))
+
+  lchob <- get.current.chob()
+
+  x <- lchob@xdata
+
+  indexClass(x) <- "POSIXct"
+
+    if (!is.null(subset) & is.character(subset)) {
+        if (strsplit(subset, " ")[[1]][1] %in% c("first", "last")) {
+            subsetvec <- strsplit(subset, " ")[[1]]
+            if (length(subsetvec) < 3) {
+                subset.n <- ifelse(length(subsetvec) == 1, 1L, 
+                  as.numeric(subsetvec[2]))
+            }
+            else {
+                subset.n <- paste(subsetvec[2:3], collapse = " ")
+            }
+            sub.index <- index(do.call(subsetvec[1], list(x, 
+                subset.n)))
+            xsubset <- which(index(x) %in% sub.index)
+        }
+        else xsubset <- which(index(x) %in% index(x[subset]))
+    }
+    else xsubset <- 1:NROW(x)
+
+#  if(!is.null(subset)) {
+#    xsubset <- which(index(x) %in% index(x[subset]))  
+#  } else xsubset <- 1:NROW(x)
+
+  xdata <- x
+  x <- x[xsubset]
+
+  color.vol <- lchob@color.vol
+
+  if(is.OHLC(x)) {
+    Opens <- as.numeric(Op(x))
+    Highs <- as.numeric(Hi(x))
+    Lows <- as.numeric(Lo(x))
+    Closes <- as.numeric(Cl(x))
+  } else {
+    Lows <- min(x[,1])
+    Highs <- max(x[,1])
+    Closes <- as.numeric(x[,1])
+    type <- "line"
+    color.vol <- FALSE
+  } 
+  if(has.Vo(x)) {
+    Volumes <- as.numeric(Vo(x))
+    show.vol <- TRUE
+  } else show.vol <- FALSE
+  
+  time.scale <- lchob@time.scale
+
+  theme <- lchob@colors
+
+  multi.col <- lchob@multi.col
+  show.vol <- lchob@show.vol
+  bar.type <- lchob@bar.type
+  line.type <- lchob@line.type
+  spacing <- lchob@spacing
+  width <- lchob@width
+  minor.ticks <- lchob@minor.ticks 
+  chart <- lchob@type
+  
+
+  major.ticks <- lchob@passed.args$major.ticks
+  if(is.null(major.ticks)) major.ticks <- 'auto'
+
+  ticks <- function(ival, major.ticks, gt = 2, lt = 30) {
+      tick.opts <- c("years", "months", "weeks", "days", "hours", 
+          "minutes", "seconds")
+      if (major.ticks %in% tick.opts) {
+          cl <- major.ticks[1]
+      }
+      else {
+          is <- sapply(tick.opts, function(y) {
+              length(endpoints(ival, y, 1)) - 1
+          })
+          cl <- names(is)[which(is > gt & is < lt)][1]
+      }
+      ep <- endpoints(ival, cl)
+      ep
+  }
+  ep <- ticks(x, major.ticks)
+  x.labels <- format(index(x)[ep + 1], "%n%b%n%Y")
+  if (time.scale == "weekly" | time.scale == "daily") 
+      x.labels <- format(index(x)[ep + 1], "%b %d%n%Y")
+  if (time.scale == "minute" | time.scale == "hourly") 
+      x.labels <- format(index(x)[ep + 1], "%b %d%n%H:%M")
+
+  chob <- new("chob")
+  chob@call <- lchob@call
+  chob@name <- lchob@name
+
+  chob@xdata <- xdata
+  chob@xsubset <- xsubset
+  chob@type <- chart[1]
+
+  chob@xrange <- c(1,NROW(x))
+  if(is.OHLC(x)) {
+    chob@yrange <- c(min(Lo(x),na.rm=TRUE),max(Hi(x),na.rm=TRUE))
+  } else chob@yrange <- range(x[,1],na.rm=TRUE)
+  
+
+  chob@color.vol <- color.vol
+  chob@multi.col <- multi.col
+  chob@show.vol <- show.vol
+  chob@bar.type <- bar.type
+  chob@line.type <- line.type
+  chob@spacing <- spacing
+  chob@width <- width
+  chob@bp <- ep
+  chob@x.labels <- x.labels
+  chob@colors <- theme
+  chob@time.scale <- time.scale
+  chob@minor.ticks <- minor.ticks
+
+  chob@length <- NROW(x)
+
+  chob@passed.args <- lchob@passed.args
+  TA <- chob@passed.args$TA
+
+  if(length(TA) > 0) {
+
+    # important to force eval of _current_ chob, not saved chob
+    thisEnv <- environment()
+    if(is.character(TA)) TA <- as.list(TA)
+    chob@passed.args$TA <- list()
+    for(ta in 1:length(TA)) {
+      if(is.character(TA[[ta]])) {
+        chob@passed.args$TA[[ta]] <- eval(parse(text=TA[[ta]]),env=thisEnv)
+      } else chob@passed.args$TA[[ta]] <- eval(TA[[ta]],env=thisEnv)
+    }
+    chob@windows <- length(which(sapply(chob@passed.args$TA,function(x) x@new)))+1
+    chob@passed.args$show.vol <- any(sapply(chob@passed.args$TA,function(x) x@name=="chartVo"))
+  } else chob@windows <- 1
+  
+  #if(debug) return(str(chob))
+  # re-evaluate the TA list, as it will be using stale data,
+  chob@passed.args$TA <- sapply(chob@passed.args$TA, function(x) { eval(x@call) } )
+
+  # draw the chart
+  do.call('chartSeries.chob',list(chob))
+
+  chob@device <- lchob@device
+
+  write.chob(chob,chob@device)
+  invisible(chob)
+} #}}}
+
+
 # candleChart {{{
 `candleChart` <-
 function(x,
@@ -602,7 +785,8 @@ function(x,
 } #}}}
 
 # .chart.theme {{{
-`.chart.theme` <- structure(list('white'=
+`.chart.theme` <- structure(list(
+                      'white'=
                            list(fg.col="#888888",bg.col="#FFFFFF",
                                 grid.col="#CCCCCC",border="#666666",
                                 minor.tick="#CCCCCC",major.tick="#888888",
@@ -611,7 +795,10 @@ function(x,
                                 dn.dn.col="#FF0000",up.dn.col="#000000",
                                 up.border="#666666",dn.border="#666666",
                                 dn.up.border="#666666",up.up.border="#666666",
-                                dn.dn.border="#666666",up.dn.border="#666666"
+                                dn.dn.border="#666666",up.dn.border="#666666",
+                                main.col="#555555",sub.col="#555555",
+                                Expiry='#C9C9C9',
+                                BBands=list(col='blue',fill='#F7F7F7')
                                 ),
                       'black'=
                            list(fg.col="#666666",bg.col="#222222",
@@ -622,7 +809,10 @@ function(x,
                                 dn.dn.col="#FF0000",up.dn.col="#000000",
                                 up.border="#666666",dn.border="#666666",
                                 dn.up.border="#666666",up.up.border="#666666",
-                                dn.dn.border="#666666",up.dn.border="#666666"
+                                dn.dn.border="#666666",up.dn.border="#666666",
+                                main.col="#999999",sub.col="#999999",
+                                Expiry='#383838',
+                                BBands=list(col='red',fill='#282828')
                                 ),
                       'beige'=
                            list(fg.col="#888888",bg.col="#F5F5D0",
@@ -633,7 +823,10 @@ function(x,
                                 dn.dn.col="#FF0000",up.dn.col="#000000",
                                 up.border="#666666",dn.border="#666666",
                                 dn.up.border="#666666",up.up.border="#666666",
-                                dn.dn.border="#666666",up.dn.border="#666666"
+                                dn.dn.border="#666666",up.dn.border="#666666",
+                                main.col="#555555",sub.col="#555555",
+                                Expiry='#C9C9C9',
+                                BBands=list(col='orange',fill='#F5F5DF')
                                 )
                      ), class='chart.theme')
 # }}}
