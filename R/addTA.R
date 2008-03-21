@@ -46,7 +46,6 @@ function(dev) {
 `addVo` <- function() {
    lchob <- get.current.chob() 
   if(!lchob@show.vol) return()
-  x <- as.matrix(eval(lchob@passed.args$x))
  
   x <- as.matrix(lchob@xdata)
 
@@ -173,7 +172,6 @@ function(x) {
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
   lchob <- get.current.chob()
-  x <- as.matrix(eval(lchob@passed.args$x))
   
   x <- as.matrix(lchob@xdata)
 
@@ -280,7 +278,6 @@ function(x) {
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
   lchob <- get.current.chob()
-  x <- as.matrix(eval(lchob@passed.args$x))
 
   x <- as.matrix(lchob@xdata)
 
@@ -678,7 +675,7 @@ function(x) {
     usr <- par('usr')
 
     # draw shading in -100:100 y-range 
-    rect(usr[1],-100,usr[2],100,col="#282828")
+    rect(usr[1],-100,usr[2],100,col=x@params$colors$BBands$fill)
 
     # fill upper and lower areas
     xx <- seq(1,length(x.range),by=spacing)
@@ -784,7 +781,6 @@ function(x) {
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
   lchob <- get.current.chob()
-  x <- as.matrix(eval(lchob@passed.args$x))
 
   x <- as.matrix(lchob@xdata)
 
@@ -850,7 +846,6 @@ function(x) {
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
   lchob <- get.current.chob()
-  x <- as.matrix(eval(lchob@passed.args$x))
 
   x <- as.matrix(lchob@xdata)
 
@@ -924,7 +919,6 @@ function(x) {
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
   lchob <- get.current.chob()
-  x <- as.matrix(eval(lchob@passed.args$x))
 
   x <- as.matrix(lchob@xdata)
 
@@ -1029,7 +1023,6 @@ function(x) {
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
   lchob <- get.current.chob()
-  x <- as.matrix(eval(lchob@passed.args$x))
 
   x <- as.matrix(lchob@xdata)
 
@@ -1617,6 +1610,81 @@ function(x) {
       abline(v=(x@params$v-1)*spacing+1,col=x@params$col)
     }
 
+} # }}}
+
+# addPoints {{{
+`addPoints` <- function(x,y=NULL,type='p',pch=20,
+                        offset=1,col=2,bg=2,cex=1,
+                        on=1,overlay=TRUE) {
+ 
+  lchob <- get.current.chob()
+  xdata <- as.matrix(lchob@xdata)
+
+  chobTA <- new("chobTA")
+  chobTA@new <- !overlay
+
+  chobTA@TA.values <- xdata[lchob@xsubset,]
+  chobTA@name <- "chartPoints"
+  chobTA@call <- match.call()
+  chobTA@on <- on # used for deciding when to draw...
+
+  if(missing(bg)) bg <- col
+
+  chobTA@params <- list(xrange=lchob@xrange,
+                        colors=lchob@colors,
+                        color.vol=lchob@color.vol,
+                        multi.col=lchob@multi.col,
+                        spacing=lchob@spacing,
+                        width=lchob@width,
+                        subset=lchob@xsubset,
+                        x.labels=lchob@x.labels,
+                        time.scale=lchob@time.scale,
+                        x=x,y=y,type=type,offset=offset,
+                        pch=pch,col=col,bg=bg,cex=cex)
+  if(is.null(sys.call(-1))) {
+    TA <- lchob@passed.args$TA
+    lchob@passed.args$TA <- c(TA,chobTA)
+    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+    do.call('chartSeries.chob',list(lchob))
+    invisible(chobTA)
+  } else {
+   return(chobTA)
+  } 
+} # }}}
+# chartPoints {{{
+`chartPoints` <-
+function(x) {
+    spacing <- x@params$spacing
+    width <- x@params$width
+
+    x.range <- x@params$xrange
+    x.range <- seq(x.range[1],x.range[2]*spacing)
+
+    multi.col <- x@params$multi.col
+    color.vol <- x@params$color.vol
+ 
+    xdata <- x@TA.values
+    x.points <- which(x@params$subset %in% x@params$x)
+    y.points <- x@params$y
+    type <- x@params$type
+    offset <- x@params$offset
+    pch <- x@params$pch
+    col <- x@params$col
+    bg <- x@params$bg
+    cex <- x@params$cex
+
+    # if OHLC and above - get Hi, else Lo
+    # if univariate - get value
+    y.data <- if(is.OHLC(xdata)) {
+      if(offset > 1) {
+        Hi(xdata)
+      } else Lo(xdata)
+    } else xdata
+ 
+    if(is.null(y.points)) y.points <- y.data[x.points] * offset
+
+    points(x=(x.points-1) * spacing + 1, y=y.points,
+           type=type,pch=pch,col=col,bg=bg,cex=cex)
 } # }}}
 
 # addEMA {{{
@@ -2224,10 +2292,14 @@ function(x) {
 
 # get.current.chob {{{
 `get.current.chob` <- function() {
-  if(exists('chob',env=sys.frames()[[1]])) {
-    if(identical(sys.frames()[[1]],.GlobalEnv)) 
-      stop("why are you calling this directly?")
-    lchob <- get('chob',env=sys.frames()[[1]])
+  first.chob <- which(sapply(sys.frames(),function(x) exists('chob',env=x)))[1]
+  if(!is.na(first.chob)) {
+    lchob <- get('chob',env=first.chob)
+
+#  if(exists('chob',env=sys.frames()[[sys.parent()]])) {
+#    if(identical(sys.frames()[[sys.parent()]],.GlobalEnv)) 
+#      stop("why are you calling this directly?")
+#    lchob <- get('chob',env=sys.frames()[[sys.parent()]])
   } else {
     gchob <- get.chob()
     #protect against NULL device or windows not drawn to yet
