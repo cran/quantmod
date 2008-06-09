@@ -82,14 +82,29 @@ function(x) {
   min(x,na.rm=TRUE)
 }
 `is.OHLC` <-
-function(x)
+function (x) #, check=FALSE) 
 {
-  all(has.Op(x),has.Hi(x),has.Lo(x),has.Cl(x))
+    if(all(has.Op(x), has.Hi(x), has.Lo(x), has.Cl(x))) # &&
+#       has.OHLC(x,TRUE) == seq(has.Op(x,1), length,out=4))
+    {
+#     if(check) {
+#       if(!all(x[,2] >  x[,3] &&
+#               x[,2] >= x[,1] &&
+#               x[,2] >= x[,4] &&
+#               x[,3] <= x[,1] &&
+#               x[,3] <= x[,4])) {
+#         warning('OHLC data is inconsistent')
+#         return(FALSE)
+#       }
+#     }
+    TRUE
+    } else FALSE
 }
+
 `is.HLC` <-
 function(x)
 {
-  all(has.Hi(x),has.Lo(x),has.Cl(x))
+  all(has.Hi(x),has.Lo(x),has.Cl(x))# && has.HLC(x,TRUE) == seq(has.Hi(x,1),length.out=3)
 }
 `has.OHLC` <-
 function(x,which=FALSE)
@@ -114,6 +129,13 @@ function(x)
 {
   if(is.HLC(x))
     return(x[,has.HLC(x,1)])
+  NULL
+}
+`OHLC` <-
+function(x)
+{
+  if(is.OHLC(x))
+    return(x[,has.OHLC(x,1)])
   NULL
 }
 `Op` <-
@@ -344,6 +366,7 @@ function(x,k=1)
     } else {
       new.x <- zoo(new.x,x.index)
     }
+    dim(new.x) <- c(NROW(new.x),length(k)) #max(k,1))
     colnames(new.x) <- paste("Lag.",k,sep="")
     return(new.x)
 }
@@ -358,6 +381,7 @@ function(x,k=1)
         c(rep(NA,k.e),x[-((length(x)-k.e+1):length(x))])
     }
     )
+    dim(new.x) <- c(NROW(new.x),length(k)) #max(k,1))
     colnames(new.x) <- paste("Lag.",k,sep="")
     return(new.x)
 }
@@ -370,9 +394,10 @@ function(x,k=1)
 }
 
 `Delt` <-
-function(x1,x2=NULL,k=0,type=c('log','arithmetic'))
+function(x1,x2=NULL,k=0,type=c('arithmetic','log'))
 {
-    type <- pmatch(type[1],c('log','arithmetic'))
+    x1 <- try.xts(x1, error=FALSE)
+    type <- match.arg(type[1],c('log','arithmetic'))
     if(length(x2)!=length(x1) && !is.null(x2)) stop('x1 and x2 must be of same length');
     if(is.null(x2)){
         x2 <- x1 #copy for same symbol deltas
@@ -382,11 +407,11 @@ function(x1,x2=NULL,k=0,type=c('log','arithmetic'))
     }
     dim(x2) <- NULL  # allow for multiple k matrix math to happen
     if(is.zoo(x1)) x1 <- as.matrix(x1)
-    if(type==1) {
+    if(type=='log') {
         xx <- log(x2/Lag(x1,k))
     } else {
-        xx <- (x2-Lag(x1,k))/Lag(x1,k)
+        xx <- x2/Lag(x1,k)-1
     }
     colnames(xx) <- paste("Delt",k,type,sep=".")
-    xx
+    reclass(xx,x1)
 }

@@ -1,8 +1,8 @@
-\name{addTA}
+\name{TA}
+\alias{TA}
 \alias{dropTA}
 \alias{moveTA}
 \alias{swapTA}
-\alias{addTA}
 \alias{addTRIX}
 \alias{addATR}
 \alias{addCCI}
@@ -26,7 +26,7 @@ Functionality marked with a \sQuote{*} is via the \pkg{TTR} package.
 
 General TA charting tool functions:
 \itemize{
-  \item{addTA}{add technical indicator}
+  \item{addTA}{add data as custom indicator }
   \item{dropTA}{remove technical indicator}
   \item{moveTA}{move a technical indicator}
   \item{swapTA}{swap two technical indicators}
@@ -74,6 +74,12 @@ Called for its side effects, an object to class \code{chobTA}
 will be returned invisibly.  If called from the \R command line
 the method will draw the appropriate indicator on the current chart.
 }
+\note{
+Calling any of the above methods from within a function or script
+will generally require them to be wrapped in a \code{plot} call
+as they rely on the context of the call to initiate the actual
+charting addition.
+}
 \references{ Josh Ulrich - TTR package }
 \author{ Jeffrey A. Ryan }
-\keyword{ utilities }
+\keyword{ aplot }

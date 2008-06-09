@@ -21,6 +21,7 @@ function(Symbols=NULL,
       #src <- src[1]
       if(is.character(Symbols)) {
       # at least one Symbol has been specified
+        Symbols <- unlist(strsplit(Symbols,';'))
         tmp.Symbols <- vector("list")
         for(each.symbol in Symbols) {
           if(each.symbol %in% names(symbols.src)) {
@@ -562,7 +563,52 @@ function(Symbols,env,
 # }}}
 
 # getSymbols.IBrokers {{{
-"getSymbols.IBrokers" <- function() {}
+"getSymbols.IBrokers" <- function(Symbols, env, return.class='xts',
+endDateTime, barSize='1 day', duration='1 M',
+useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
+{
+  importDefaults('getSymbols.IBrokers')
+  this.env <- environment()
+  for(var in names(list(...))) {
+    assign(var, list(...)[[var]], this.env)
+  }
+  if(missing(verbose))
+    verbose <- FALSE
+  if(missing(auto.assign))
+    auto.assign <- TRUE
+  if(is.method.available("twsConnect","IBrokers")) {
+    tws <- do.call('twsConnect',list(clientId=1001))
+    on.exit(do.call('twsDisconnect',list(tws)))
+  
+    if(missing(endDateTime)) endDateTime <- NULL
+  
+    for(i in 1:length(Symbols)) {
+      Contract <- getSymbolLookup()[[Symbols[i]]]
+      if(inherits(Contract,'twsContract')) {
+        fr <- do.call('reqHistoricalData',list(tws, Contract, endDateTime=endDateTime,
+                                barSize=barSize, duration=duration,
+                                useRTH=useRTH, whatToShow=whatToShow,
+                                time.format=time.format, verbose=verbose))
+        fr <- convert.time.series(fr=fr, return.class=return.class)
+        if(auto.assign)
+          assign(Symbols[[i]], fr, env)
+        if(i < length(Symbols)) {
+          if(verbose) cat('waiting for TWS to accept next request')
+          for(pacing in 1:6) {
+            if(verbose) cat('.',sep='')
+            Sys.sleep(1)
+          }
+          if(verbose) cat('done\n')
+        }
+      } else {
+        warning(paste('unable to load',Symbols[i],': missing twsContract definition'))
+      }
+    }
+    if(auto.assign)
+      return(Symbols)
+    return(fr) 
+  }
+}
 # }}}
 
 # getSymbols.RBloomberg {{{
@@ -683,7 +729,7 @@ function(Symbols,env,return.class='xts',
          return(fr)
        } else
        if('its' %in% return.class) {
-         if("package:its" %in% search() || require("its", quietly=TRUE)) {
+         if("package:its" %in% search() || suppressMessages(require("its", quietly=TRUE))) {
            fr.dates <- as.POSIXct(as.character(index(fr)))
            fr <- its::its(coredata(fr),fr.dates)
            return(fr)
@@ -693,7 +739,7 @@ function(Symbols,env,return.class='xts',
          }
        } else 
        if('timeSeries' %in% return.class) {
-         if("package:fSeries" %in% search() || require("fSeries",quietly=TRUE)) {
+         if("package:fSeries" %in% search() || suppressMessages(require("fSeries",quietly=TRUE))) {
            fr <- as.timeSeries(fr)
            return(fr)
          } else {
