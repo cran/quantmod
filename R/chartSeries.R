@@ -172,7 +172,7 @@ function(x,
          subset = NULL,
          type="candlesticks",
          show.grid=TRUE,name=deparse(substitute(x)),
-         time.scale=NULL,
+         time.scale=NULL,log.scale=FALSE,
          TA="addVo()",
          theme=chartTheme("black"),
          major.ticks='auto', minor.ticks = TRUE,
@@ -180,7 +180,7 @@ function(x,
          ) {
   do.call('chartSeries',list(x,subset=subset,
                              name=name,type='candlesticks',show.grid=show.grid,
-                             time.scale=time.scale,TA=substitute(TA),
+                             time.scale=time.scale,log.scale=log.scale,TA=substitute(TA),
                              theme=theme,major.ticks=major.ticks,minor.ticks=minor.ticks,
                              color.vol=color.vol,
                              multi.col=multi.col,...))
@@ -191,7 +191,7 @@ function(x,
          subset = NULL,
          type="bars",
          show.grid=TRUE,name=deparse(substitute(x)),
-         time.scale=NULL,
+         time.scale=NULL,log.scale=FALSE,
          TA="addVo()",
          bar.type="ohlc",
          theme=chartTheme("black"),
@@ -200,7 +200,7 @@ function(x,
          ) {
   do.call('chartSeries',list(x,subset=subset,
                              name=name,type='bars',show.grid=show.grid,
-                             time.scale=time.scale,TA=substitute(TA),bar.type=bar.type,
+                             time.scale=time.scale,log.scale=log.scale,TA=substitute(TA),bar.type=bar.type,
                              theme=theme,major.ticks=major.ticks,minor.ticks=minor.ticks,
                              color.vol=color.vol,
                              multi.col=multi.col,...))
@@ -210,7 +210,7 @@ function(x,
 function(x,subset = NULL,
          type="line",
          show.grid=TRUE,name=deparse(substitute(x)),
-         time.scale=NULL,
+         time.scale=NULL,log.scale=FALSE,
          TA="addVo()",
          line.type="l",
          theme=chartTheme("black"),
@@ -219,7 +219,7 @@ function(x,subset = NULL,
          ) {
   do.call('chartSeries',list(x,subset=subset,
                              name=name,type='line',show.grid=show.grid,
-                             time.scale=time.scale,TA=substitute(TA),line.type=line.type,
+                             time.scale=time.scale,log.scale=log.scale,TA=substitute(TA),line.type=line.type,
                              theme=theme,major.ticks=major.ticks,minor.ticks=minor.ticks,
                              color.vol=color.vol,
                              multi.col=multi.col,...))
@@ -337,13 +337,14 @@ function(x,
          type=c("auto","candlesticks","matchsticks","bars","line"),
          subset=NULL,
          show.grid=TRUE,name=NULL,
-         time.scale=NULL,
+         time.scale=NULL,log.scale=FALSE,
          TA='addVo()',TAsep=';',
          line.type="l",
          bar.type="ohlc",
          theme=chartTheme("black"),
          layout=NA,
          major.ticks='auto',minor.ticks=TRUE,
+         yrange=NULL,
          up.col,dn.col,color.vol=TRUE,multi.col=FALSE,...
          ) {
   sys.TZ <- Sys.getenv('TZ')
@@ -453,6 +454,10 @@ function(x,
     chob@yrange <- c(min(Lo(x),na.rm=TRUE),max(Hi(x),na.rm=TRUE))
   } else chob@yrange <- range(x[,1],na.rm=TRUE)
   
+  if(!is.null(yrange) && length(yrange)==2)
+    chob@yrange <- yrange
+
+  chob@log.scale <- log.scale
 
   chob@color.vol <- color.vol
   chob@multi.col <- multi.col
@@ -485,8 +490,16 @@ function(x,
           chob@passed.args$TA[[ta]] <- eval(parse(text=TA[[ta]]),env=thisEnv)
         } else chob@passed.args$TA[[ta]] <- eval(TA[[ta]],env=thisEnv)
       }
-      poss.new <- sapply(chob@passed.args$TA, function(x) x@new)
-      chob@windows <- sum(poss.new) + 1
+      # check if all args are indeed chobTA
+      poss.new <- sapply(chob@passed.args$TA, function(x) 
+                          {
+                            if(isS4(x) && is(x, 'chobTA')) 
+                              return(x@new) 
+                            stop('improper TA argument/call in chartSeries', call.=FALSE)
+                          } )
+      if(length(poss.new) > 0)
+        poss.new <- which(poss.new)
+      chob@windows <- length(poss.new) + 1
       #chob@windows <- length(which(sapply(chob@passed.args$TA,
       #                           function(x) ifelse(is.null(x),FALSE,x@new))))+1
       chob@passed.args$show.vol <- any(sapply(chob@passed.args$TA,

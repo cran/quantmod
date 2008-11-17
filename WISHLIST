@@ -16,9 +16,11 @@ quantmod wishlist: as of Mar 21, 2008
   
   - Move to R-forge for devel tools [done]
   
-  - getSymbols.skeleton, buildModel.skeleton, addTA.skeleton
+  - getSymbols.skeleton
+  - buildModel.skeleton
+  - addTA.skeleton [done]
 
-  - convert to xts from zoo throughout.  Simplify data methods [started]
+  - convert to xts from zoo throughout.  Simplify data methods [done]
   
   - try to remove dependence on fSeries and its (etc).  Through 'xts'???
 
@@ -27,20 +29,22 @@ FUNCTIONALITY:
   - getFundamentals.google and getFundamentals to download data
     from google.  Possibly add arbitrary downloads from finance.yahoo.com
     using http://www.gummy-stuff.org/Yahoo-data.htm formats
-    [ renamed getFinancials (google) done - jar ]
+    [ renamed getFinancials (google) done - jar, getQuote - done ]
 
   - tradeRule and tradeLog
 
   - move all quantmod.OHLC to c('OHLC','xts','zoo') format - eventually move
-    to new package all together [ xts is ready for move - jar]
+    to new package all together [ done ]
 
 
 CHARTS:
   - add /demo script
 
   - add addHolidays/Weekends function to add in missing data with NA [see fillIndex beta in 'xts']
+    [this is not really good - as any TA indicators will have to jump? past the NAs - jar]
 
   - liveChart function - used in conjunction with RT data feeds [SEE BELOW]
+
   - add x to reChart to allow for updated/different data, which may
     be used in conjuction with a RT feed callback such as in the IBrokers
     package
@@ -48,9 +52,10 @@ CHARTS:
   - add 'periodicity' argument to chartSeries
 
   - dropTA function to remove TA indicators applied [moveTA and swapTA added as well: 2/16/2008 - jar]
+    [updated to remove _all_ TA by position in TA list. Still buggy - jar]
 
   - add subset argument to chartSeries (et al) and buildModel function to pass
-    along to underlying [.xts method [done, along with zoom & zoomChart - jar ]
+    along to underlying [.xts method [done, along with zooom & zoomChart - jar ]
 
   - mask lagged indicator days - use full dataset for calculation and a
     seperate subset for actual plotting.  (using above [.xts method) [ done see above - jar ]
@@ -60,8 +65,9 @@ CHARTS:
     series normal command interpretation
      ** OR **
     partition device in n-regions and have chartSeries.chob check
+    [chartLayout is close to a solution for the second idea]
 
-  - HSV color schemes from vcd or colorbrewer
+  - HSV color schemes from vcd or colorbrewer - or built in
 
   - finish TA integration with TTR
 
@@ -73,6 +79,34 @@ CHARTS:
     - periodReturn - chartSeries method(no!) to handle
     - modelResults
     - integrate with PerformanceAnalytics
+
+  - New rules functions to be implemented:
+
+    recentTop(nback
+    recentBot(nback
+    recentHi(nback
+    recentLo(nback
+
+    crossAbove(level
+    crossBelow(level
+
+    levelAbove(
+    levelBelow(
+
+    higherHi(nback
+    higherLo(nback
+
+    lowerHi(nback
+    lowerLo(nback
+
+    newHi(nback
+    newLo(nback
+
+    seriesIncr  [ diff( > 0 ]
+    seriesDecr  [ diff( < 0 ]
+
+    seriesAccel [ diff(diff > 0 ]
+    seriesDecel [ diff(diff < 0 ]
 
 TESTING:
 

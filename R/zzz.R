@@ -1,6 +1,6 @@
 ".onLoad" <- function(lib,pkg) {
   cat("quantmod: Quantitative Financial Modelling Framework\n\n")
-  cat("Version 0.3-6, Revision 433\n")
+  cat("Version 0.3-7, Revision 461\n")
   cat("http://www.quantmod.com\n\n")
 }
 
@@ -15,11 +15,11 @@ setClass("quantmod",representation(
                     build.inputs="character",
                     symbols="character",
                     product="character",
-                    price.levels="zoo",
+                    price.levels="ANY",
                     training.data="ANY",
                     build.date="character",
                     fitted.model="ANY",
-                    model.data="zoo",
+                    model.data="ANY",
                     quantmod.version="numeric"
                     )
         );

@@ -23,6 +23,7 @@ chartSeries(x,
            show.grid = TRUE, 
            name = NULL,
            time.scale = NULL,
+           log.scale = FALSE,
            TA = 'addVo()',
            TAsep=';',
            line.type = "l",
@@ -30,6 +31,7 @@ chartSeries(x,
            theme = chartTheme("black"),
            layout = NA,
            major.ticks='auto', minor.ticks=TRUE,
+           yrange=NULL,
            up.col,dn.col,color.vol = TRUE, multi.col = FALSE,
            ...)
 
@@ -42,6 +44,7 @@ reChart(type = c("auto", "candlesticks", "matchsticks", "bars","line"),
        bar.type = "ohlc",
        theme = chartTheme("black"),
        major.ticks='auto', minor.ticks=TRUE,
+       yrange=NULL,
        up.col,dn.col,color.vol = TRUE, multi.col = FALSE,
        ...)
 }
@@ -52,7 +55,8 @@ reChart(type = c("auto", "candlesticks", "matchsticks", "bars","line"),
   \item{subset}{ xts style date subsetting argument }
   \item{show.grid}{ display price grid lines? }
   \item{name}{ name of chart }
-  \item{time.scale}{ what is the timescale? automatically deduced }
+  \item{time.scale}{ what is the timescale? automatically deduced (broken) }
+  \item{log.scale}{ should the y-axis be log-scaled? }
   \item{TA}{ a vector of technical indicators and params, or character strings }
   \item{TAsep}{ TA delimiter for TA strings }
   \item{line.type}{ type of line in line chart }
@@ -61,6 +65,7 @@ reChart(type = c("auto", "candlesticks", "matchsticks", "bars","line"),
   \item{layout}{ if \code{NULL} bypass internal layout }
   \item{major.ticks}{ where should major ticks be drawn}
   \item{minor.ticks}{ should minor ticks be draw? }
+  \item{yrange}{ override y-scale }
   \item{up.col}{ up bar/candle color }
   \item{dn.col}{ down bar/candle color }
   \item{color.vol}{ color code volume? }

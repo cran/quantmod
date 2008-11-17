@@ -19,12 +19,14 @@ function(x)
     
     layout(cl$mat, cl$width, cl$height, respect=FALSE)
   }
-  if(x@windows > 1) do.call('par',par.list[[1]]) 
-  #layout(matrix(c(2,3,4,5,1,1,1,1),nc=4,byrow=TRUE),c(1,1,1,1),c(1,2),FALSE)
-  #layout(matrix(c(1,2,1,3,1,4,1,5),nc=2,byrow=TRUE),c(5,1),c(1),FALSE)
+  if(x@windows > 1) {
+    do.call('par',par.list[[1]]) 
+  } else par(mar=c(3.5,3.5,2,3))
 
   x.range <- 1:(x@xrange[2]*x@spacing)
   y.range <- seq(x@yrange[1],x@yrange[2],length.out=length(x.range))
+
+  log.scale <- ifelse(x@log.scale, 'y', '')
  
   # get current values of series to be charted
   xx <- x@xdata
@@ -47,7 +49,10 @@ function(x)
       xaxs='r',las=2,fg=x@colors$fg.col)
 
   # create scale of main plot window
-  plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
+  plot.new()
+  plot.window(xlim=c(1,x@xrange[2]*x@spacing),
+              ylim=c(x@yrange[1],x@yrange[2]),
+              log=log.scale)
 
   coords <- par('usr')
   rect(coords[1],coords[3],coords[2],coords[4],col=x@colors$area)
@@ -64,7 +69,8 @@ function(x)
   }
 
   # add gridlines _under_ main series
-  grid(NA,NULL,col=x@colors$grid.col)
+  #grid(NA,NULL,col=x@colors$grid.col)
+  abline(h=axTicks(2), col=x@colors$grid.col)
 
   # a vector of x positions
   x.pos <- 1+x@spacing*(1:x@length-1)
@@ -141,6 +147,7 @@ function(x)
   if(x@windows > 1 | length(x@passed.args$TA) > 0) {
 
     for(i in 1:x@windows) {
+
       # draw all overlays needed for figure 'i' on plot
       overlay.TA <- which(sapply(x@passed.args$TA,function(x) identical(x@on,as.numeric(i))))
       for(j in overlay.TA) {
@@ -149,7 +156,7 @@ function(x)
         main.key <- c(main.key,overlay.text)
       }
 
-      if(i == 1) {
+      if(1) { #i == 1) {
         # add indicator key to main chart
         if(length(main.key) > 0) {
           for(indicator in 1:length(main.key)) {
@@ -158,16 +165,38 @@ function(x)
                    text.col=rev(main.key[[indicator]][["text.col"]])[1], bty='n', y.inter=0.95)
           }
         }
-      }
+        main.key <- list()
+      } 
 
       if(x@windows >= i+1) {
         # if there are more windows to draw...draw the next one
         next.new.TA <- which(sapply(x@passed.args$TA,function(x) x@new))[i]
         do.call('par',par.list[[2]]) #par(mar=c(0,4,0,3))
         if(x@windows == i+1) do.call('par',par.list[[3]]) #par(mar=c(4,4,0,3))
-#  coords <- par('usr')
-#  rect(coords[1],coords[3],coords[2],coords[4],col=x@colors$area)
-        do.call(x@passed.args$TA[[next.new.TA]]@name,list(x@passed.args$TA[[next.new.TA]]))
+        # draw all underlays needed for next figure 'i' on plot
+        underlay.TA <- which(sapply(x@passed.args$TA,
+                             function(x) identical(x@on, as.numeric(-(i+1)))))
+        if(length(underlay.TA) > 0) {
+          # if underlays are to be drawn, first set up plot window
+          #main.key <- list(list("")) # need to position underlay text _under_ original text
+          do.call("chartSetUp",list(x@passed.args$TA[[next.new.TA]]))
+          for (j in underlay.TA) {
+            tmp.x <- x@passed.args$TA[[j]]
+            underlay.text <- c(main.key,do.call(x@passed.args$TA[[j]]@name, list(tmp.x)))
+            #main.key <- c(main.key,do.call(x@passed.args$TA[[j]]@name, list(tmp.x)))
+          }
+          x@passed.args$TA[[next.new.TA]]@new <- FALSE # make sure plot is not redrawn
+          main.key <- c(do.call(x@passed.args$TA[[next.new.TA]]@name,list(x@passed.args$TA[[next.new.TA]])),underlay.text)
+          x@passed.args$TA[[next.new.TA]]@new <- TRUE # make sure plot is redrawn
+          if(length(main.key) > 0) {
+            for(indicator in (length(main.key)-length(underlay.text)):length(main.key)) {
+              legend("topleft",
+                     legend=c(rep('',indicator-1), paste(main.key[[indicator]][["legend"]],collapse="")),
+                     text.col=rev(main.key[[indicator]][["text.col"]])[1], bty='n', y.inter=0.95)
+            }
+          }
+        } else
+        main.key <- do.call(x@passed.args$TA[[next.new.TA]]@name,list(x@passed.args$TA[[next.new.TA]]))
       }
     }
 
@@ -211,19 +240,21 @@ function(x) {
 #}}}
 
 # experimental {{{
-#`doCharts` <- function(x, nc) {
-#  chartLayout(x,nc)
+#`doCharts` <- function(W, TA, nc) {
+#  chartLayout(W,TA,nc)
 #  for(i in 1:x) barChart(GS, subset='2008', layout=NULL)
 #}
 #
-#`chartLayout` <- function(x, nc) {
-# x <- (rep(c(1,1,2),x) + rep(seq(0,x*2-2,by=2),each=3),nc=nc,byrow=FALSE)
+#`chartLayout` <- function(W=1, TA=1, nc=1) {
+# x <- matrix(rep(c(1,1,seq(2,length.out=TA)),W) +
+#              rep(seq(0,by=TA+1, length.out=W), each=TA+2),
+#              nc=nc, byrow=FALSE)
 # layout(x,1,1,respect=FALSE)
 #}
 #
-#`dozenCharts` <- function(x, nc) {
+#`dozenCharts` <- function(W,TA , nc) {
 #  getSymbols("GS")
-#  chartLayout(x,nc)
+#  chartLayout(W,TA,nc)
 #  TAs <- paste('addVo();addMACD();addRSI();addSMI();addROC();addDPO()',
 #               'addADX();addATR();addCMF();addCCI();addCMO();addWPR()',sep=';')
 #  TAs <- unlist(strsplit(TAs,';'))
@@ -231,7 +262,7 @@ function(x) {
 #                     'addExpiry();addSAR();addSMA()',sep=';')
 #  Overlays <- rep(unlist(strsplit(Overlays,';')),2)
 #   
-#  for(i in 1:x) {
+#  for(i in 1:W) {
 #    TA <- paste(TAs[i],Overlays[i],sep=';')
 #    candleChart(GS, theme='white', subset='2008', type='b', layout=NULL, TA=TA)
 #  }

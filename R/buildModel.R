@@ -1,3 +1,22 @@
+`bM` <-
+function(x,FUN,subset,...) {
+    if(!is.quantmod(x)) stop('x must be a quantmod object')
+
+    FUN <- as.character(paste("buildModel.",deparse(substitute(FUN)),sep=''))
+
+    training.data <- x@model.data[subset]
+
+    mcall <- do.call(FUN,list(quantmod=x,training.data=training.data, ...))
+
+    x@fitted.model <- mcall$fitted
+    x@model.inputs <- as.character(mcall$inputs)
+    x@build.date = as.character(Sys.time())
+    x@model.id <- paste(class(mcall$fitted)[length(class(mcall$fitted))],
+                               as.numeric(Sys.time()),sep='')
+    x@training.data <- index(training.data)
+    invisible(x)
+}
+
 "buildModel" <-
 function(x,method,training.per,...) {
 
