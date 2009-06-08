@@ -44,6 +44,17 @@ function(x)
     Highs <- max(xx[,1],na.rm=TRUE)
     Closes <- as.numeric(xx[,1])
   }
+  if(x@type=="Heikin-Ashi") {
+    xCloses <- (Opens+Highs+Lows+Closes)/4
+    xOpens  <- (Opens + lag(Closes)) / 2
+    xHighs  <- max(c(Highs, xOpens, xCloses),na=TRUE)
+    xLows   <- min(c(Lows,  xOpens, xCloses),na=TRUE)
+    Closes <- xCloses
+    Opens  <- xOpens
+    Highs  <- xHighs
+    Lows   <- xLows
+    x@type <- "candlesticks"
+  }
 
   par(bg=x@colors$bg.col,col.axis=x@colors$fg.col,
       xaxs='r',las=2,fg=x@colors$fg.col)
@@ -61,7 +72,10 @@ function(x)
   main.key <- list() # main.key stores text to be added after all drawing by text()
   if (length(x@passed.args$TA) > 0) {
     underlay.TA <- which(sapply(x@passed.args$TA,
-                         function(x) identical(x@on, as.numeric(-1))))
+                         function(x) {
+                           on <- (-1 %in% x@on)
+                           ifelse(!identical(on, logical(0)), on, F)
+                         }))
     for (j in underlay.TA) {
       tmp.x <- x@passed.args$TA[[j]]
       main.key <- c(main.key,do.call(x@passed.args$TA[[j]]@name, list(tmp.x)))
@@ -108,7 +122,11 @@ function(x)
     }
     if(x@type %in% c('candlesticks','matchsticks')) {
       # draw HL lines
-      segments(x.pos,Lows,x.pos,Highs,col=bar.border)
+      #segments(x.pos,Lows,x.pos,Highs,col=bar.border)
+      # draw bottom wick
+      segments(x.pos,Lows,x.pos,apply(cbind(Opens,Closes),1,min),col=bar.border)
+      # draw top wick
+      segments(x.pos,Highs,x.pos,apply(cbind(Opens,Closes),1,max),col=bar.border)
 
       # draw OC candles
       if(x@type=='candlesticks') {
@@ -132,7 +150,7 @@ function(x)
                        text.col=last(bar.col))),main.key)
   }
 
-  axis(2)
+  axis(4)
   box(col=x@colors$fg.col)
 
   old.adj <- par('adj')
@@ -149,7 +167,11 @@ function(x)
     for(i in 1:x@windows) {
 
       # draw all overlays needed for figure 'i' on plot
-      overlay.TA <- which(sapply(x@passed.args$TA,function(x) identical(x@on,as.numeric(i))))
+      overlay.TA <- which(sapply(x@passed.args$TA,
+                          function(x) {
+                            on <- i %in% x@on
+                            ifelse(!identical(on,logical(0)),on,FALSE)
+                          }))
       for(j in overlay.TA) {
         # call draws TA and returns the text to add to the chart
         overlay.text <- do.call(x@passed.args$TA[[j]]@name,list(x@passed.args$TA[[j]]))
@@ -175,7 +197,10 @@ function(x)
         if(x@windows == i+1) do.call('par',par.list[[3]]) #par(mar=c(4,4,0,3))
         # draw all underlays needed for next figure 'i' on plot
         underlay.TA <- which(sapply(x@passed.args$TA,
-                             function(x) identical(x@on, as.numeric(-(i+1)))))
+                             function(x) {
+                               on <- (-(i+1) %in% x@on)
+                               ifelse(!identical(on,logical(0)),on,FALSE)
+                             }))
         if(length(underlay.TA) > 0) {
           # if underlays are to be drawn, first set up plot window
           #main.key <- list(list("")) # need to position underlay text _under_ original text

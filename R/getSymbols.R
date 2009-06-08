@@ -67,26 +67,34 @@ function(Symbols=NULL,
                                            ...))
           if(!auto.assign)
             return(symbols.returned)
-          for(each.symbol in symbols.returned) all.symbols[[each.symbol]]=symbol.source 
+          for(each.symbol in symbols.returned) all.symbols[[each.symbol]] <- symbol.source 
         }
         req.symbols <- names(all.symbols)
         all.symbols <- c(all.symbols,old.Symbols)[unique(names(c(all.symbols,old.Symbols)))]
         if(auto.assign) {
           assign('.getSymbols',all.symbols,env);
-          return(req.symbols)
+          if(identical(env, .GlobalEnv))
+            return(req.symbols)
+          return(env)
         }
-        #invisible(return(env))
       } else {
         warning('no Symbols specified')
       }
 }
 #}}}
 
+loadSymbols <- getSymbols
+loadSymbols.formals <- formals(getSymbols)
+loadSymbols.formals$env <- substitute(.GlobalEnv)
+formals(loadSymbols) <- loadSymbols.formals
+
+
 # getSymbols.yahoo {{{
 "getSymbols.yahoo" <-
 function(Symbols,env,return.class='xts',
          from='2007-01-01',
          to=Sys.Date(),
+         adjust=FALSE,
          ...)
 {
      importDefaults("getSymbols.yahoo")
@@ -138,15 +146,32 @@ function(Symbols,env,return.class='xts',
        unlink(tmp)
        if(verbose) cat("done.\n")
        fr <- xts(as.matrix(fr[,-1]),
-                 as.Date(fr[,1],origin='1970-01-01'),
+                 as.POSIXct(fr[,1]),
                  src='yahoo',updated=Sys.time())
        colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
                              c('Open','High','Low','Close','Volume','Adjusted'),
                              sep='.')
+       if(adjust) {
+         # Adjustment algorithm by Joshua Ulrich
+         div <- getDividends(Symbols[[i]], auto.assign=FALSE)
+         spl <- getSplits(Symbols[[i]],    auto.assign=FALSE)
+         adj <- na.omit(adjSplitDiv(spl, div, Cl(fr)))
+
+         fr[,1] <- fr[,1] * adj[,'Split'] * adj[,'Div']  # Open
+         fr[,2] <- fr[,2] * adj[,'Split'] * adj[,'Div']  # High
+         fr[,3] <- fr[,3] * adj[,'Split'] * adj[,'Div']  # Low
+         fr[,4] <- fr[,4] * adj[,'Split'] * adj[,'Div']  # Close
+         fr[,5] <- fr[,5] * ( 1 / adj[,'Div'] )          # Volume
+       }
+
        fr <- convert.time.series(fr=fr,return.class=return.class)
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
+       if(i >= 5 && length(Symbols) > 5) {
+         message("pausing 1 second between requests for more than 5 symbols")
+         Sys.sleep(1)
+       }
      }
      if(auto.assign)
        return(Symbols)
@@ -390,7 +415,7 @@ function(Symbols,env,return.class='xts',
 
 # getFX {{{
 `getFX` <-
-function(Currencies,from='2007-01-01',to=Sys.Date(),
+function(Currencies,from=Sys.Date()-500,to=Sys.Date(),
          env=.GlobalEnv,
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
@@ -416,7 +441,7 @@ function(Currencies,from='2007-01-01',to=Sys.Date(),
 
 # getMetals {{{
 `getMetals` <-
-function(Metals,from='2007-01-01',to=Sys.Date(),
+function(Metals,from=Sys.Date()-500,to=Sys.Date(),
          base.currency="USD",env=.GlobalEnv,
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
@@ -487,6 +512,65 @@ function(Symbols,env,
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),
                           c('Open','High','Low','Close','Volume','Adjusted'),
                              sep='.')
+    fr <- convert.time.series(fr=fr,return.class=return.class)
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    if(auto.assign)
+      assign(Symbols[[i]],fr,env)
+    }
+    if(auto.assign)
+      return(Symbols)
+    return(fr)
+}
+#}}}
+
+# getSymbols.rds {{{
+"getSymbols.rds" <-
+function(Symbols,env,
+         dir="",
+         return.class="xts",
+         extension="rds",
+         col.names=c('Open','High','Low','Close','Volume','Adjusted'),
+         ...) {
+  importDefaults("getSymbols.rds")
+  this.env <- environment()
+  for(var in names(list(...))) {
+    assign(var,list(...)[[var]], this.env)
+  }
+
+  default.return.class <- return.class
+  default.dir <- dir
+  default.extension <- extension
+
+  if(missing(verbose)) verbose <- FALSE
+  if(missing(auto.assign)) auto.assign <- TRUE
+
+  for(i in 1:length(Symbols)) {
+    return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
+    return.class <- ifelse(is.null(return.class),default.return.class,
+                           return.class)
+    dir <- getSymbolLookup()[[Symbols[[i]]]]$dir
+    dir <- ifelse(is.null(dir),default.dir,
+                           dir)
+    extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
+    extension <- ifelse(is.null(extension),default.extension,
+                           extension)
+    if(verbose) cat("loading ",Symbols[[i]],".....")
+    if(dir=="") {
+      sym.file <- paste(Symbols[[i]],extension,sep=".")
+    } else {
+      sym.file <- file.path(dir,paste(Symbols[[i]],extension,sep="."))
+    }
+    if(!file.exists(sym.file)) {
+      cat("\nfile ",paste(Symbols[[i]],extension,sep='.')," does not exist ",
+          "in ",dir,"....skipping\n")
+      next
+    }
+    #fr <- read.csv(sym.file)
+    fr <- .readRDS(sym.file)
+    if(verbose)  
+      cat("done.\n")
+    if(!is.xts(fr)) fr <- xts(fr[,-1],as.Date(fr[,1],origin='1970-01-01'),src='rda',updated=Sys.time())
+    colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),col.names,sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
     Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
     if(auto.assign)
@@ -638,10 +722,12 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
 # getSymbols.oanda {{{
 `getSymbols.oanda` <-
 function(Symbols,env,return.class='xts',
-         from='2007-01-01',
+         from=Sys.Date()-500,
          to=Sys.Date(),
          ...) {
      importDefaults("getSymbols.oanda")
+     if( (to-from) > 500 )
+       stop("oanda.com limits data to 500 days per request", call.=FALSE)
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -667,7 +753,7 @@ function(Symbols,env,return.class='xts',
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- ifelse(is.null(to),default.to,to)
    
-       if(as.Date(to,origin='1970-01-01')-as.Date(from,origin='1970-01-01') > 1999) stop("oanda limits data to 2000 days")
+       if(as.Date(to,origin='1970-01-01')-as.Date(from,origin='1970-01-01') > 499) stop("oanda limits data to 2000 days")
        # automatically break larger requests into equal sized smaller request at some point
        # for now just let it remain
 

@@ -1,8 +1,8 @@
-".onLoad" <- function(lib,pkg) {
-  cat("quantmod: Quantitative Financial Modelling Framework\n\n")
-  cat("Version 0.3-7, Revision 461\n")
-  cat("http://www.quantmod.com\n\n")
-}
+#".onLoad" <- function(lib,pkg) {
+#  cat("quantmod: Quantitative Financial Modelling Framework\n\n")
+#  cat("Version 0.3-7, Revision 461\n")
+#  cat("http://www.quantmod.com\n\n")
+#}
 
 setOldClass("zoo");
 setOldClass("Date");
@@ -34,12 +34,12 @@ setClass("quantmodReturn",representation(
                     returnsBy="ANY"
                     )
         );
-setClass("quantmodResults",representation(
-                    model="quantmod",
-                    signal="zoo",
-                    return="quantmodReturn"
-                    )
-        );
+#setClass("quantmodResults",representation(
+#                    model="quantmod",
+#                    signal="zoo",
+#                    return="quantmodReturn"
+#                    )
+#        );
 #setClass("tradeLog",representation(
 #                    action="character",
 #                    quantity="numeric",
@@ -62,6 +62,12 @@ setClass("quantmodResults",representation(
 #         tradeLog <- cbind(object@date,object@trade.id,object@price,object@quantity)
 #         print(zoo(tradeLog,order.by=object@date))
 #         })
+setMethod("show", "chobTA",
+          function(object) {
+            plot.chobTA(object)
+          }
+)
+
 setMethod("show","quantmod", function(object) {
 	cat("\nquantmod object:  ",
         object@model.id,"\tBuild date: ",
@@ -112,22 +118,22 @@ setMethod("summary","quantmod", function(object) {
     }
 })
 
-setMethod("show","quantmodResults", function(object) {
-    cat("\n  Model: ",object@model@model.id,"\n")
-	cat("\n  C.A.G.R.: ",sprintf("%04.2f%%",object@return@CAGR*100),"\tH.P.R.: ",
-        sprintf("%04.2f%%",object@return@HPR*100),"\n");
-    to.date.ret <- sprintf("%04.2f%%",object@return@returnsBy[NROW(object@return@returnsBy),-1]*100)
-    to.date.ret <- as.data.frame(t(to.date.ret),row.names="            ")
-
-    colnames(to.date.ret) <- colnames(object@return@returnsBy[,-1])
-    cat("\n  Returns by period summary:\n\n")
-    print(as.data.frame(lapply(as.data.frame(object@return@returnsBy[,-1]), 
-            function(x) sprintf("%04.2f%%",(rev(as.numeric(summary(x))[1:6]*100)))),
-            row.names=c('    Max.','    3rd Qu.','    Mean','    Median','    2rd Qu.','    Min.')))
-    cat("\n  Period to date returns:\n\n")
-    print(to.date.ret)
-}
-)
+#setMethod("show","quantmodResults", function(object) {
+#    cat("\n  Model: ",object@model@model.id,"\n")
+#	cat("\n  C.A.G.R.: ",sprintf("%04.2f%%",object@return@CAGR*100),"\tH.P.R.: ",
+#        sprintf("%04.2f%%",object@return@HPR*100),"\n");
+#    to.date.ret <- sprintf("%04.2f%%",object@return@returnsBy[NROW(object@return@returnsBy),-1]*100)
+#    to.date.ret <- as.data.frame(t(to.date.ret),row.names="            ")
+#
+#    colnames(to.date.ret) <- colnames(object@return@returnsBy[,-1])
+#    cat("\n  Returns by period summary:\n\n")
+#    print(as.data.frame(lapply(as.data.frame(object@return@returnsBy[,-1]), 
+#            function(x) sprintf("%04.2f%%",(rev(as.numeric(summary(x))[1:6]*100)))),
+#            row.names=c('    Max.','    3rd Qu.','    Mean','    Median','    2rd Qu.','    Min.')))
+#    cat("\n  Period to date returns:\n\n")
+#    print(to.date.ret)
+#}
+#)
 
 "fittedModel"<-function(object) {object@fitted.model}
 #setGeneric("fittedModel<-", function(x,...,value) {standardGeneric("fittedModel<-")})

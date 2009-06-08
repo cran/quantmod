@@ -34,7 +34,8 @@
 
   # add ability to customize legend.name, still retaining legend color/last value
   if(!missing(legend.name) && is.character(legend.name)) {
-    .body[22] <- paste('legend.name <-',deparse(legend.name))
+    .body[22] <- paste("legend.name <- gsub('^.*[(]',",paste('\'',legend.name,'(\''),
+                       ",deparse(match.call()),extended=TRUE)")
   }  
 
   # cdots: should the newTA object have a ... arg?
@@ -108,7 +109,7 @@
     chobTA@TA.values <- x[lchob@xsubset]
     } else chobTA@TA.values <- x[lchob@xsubset,]
     chobTA@name <- "chartTA"
-    if(is.na(on)) {
+    if(any(is.na(on))) {
     chobTA@new <- TRUE
     }
     else {

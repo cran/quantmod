@@ -185,6 +185,25 @@ function(x,
                              color.vol=color.vol,
                              multi.col=multi.col,...))
 } #}}}
+# matchChart {{{
+`matchChart` <-
+function(x,
+         subset = NULL,
+         type="matchsticks",
+         show.grid=TRUE,name=deparse(substitute(x)),
+         time.scale=NULL,log.scale=FALSE,
+         TA="addVo()",
+         theme=chartTheme("black"),
+         major.ticks='auto', minor.ticks = TRUE,
+         color.vol=TRUE,multi.col=FALSE,...
+         ) {
+  do.call('chartSeries',list(x,subset=subset,
+                             name=name,type='matchsticks',show.grid=show.grid,
+                             time.scale=time.scale,log.scale=log.scale,TA=substitute(TA),
+                             theme=theme,major.ticks=major.ticks,minor.ticks=minor.ticks,
+                             color.vol=color.vol,
+                             multi.col=multi.col,...))
+} #}}}
 # barChart {{{
 `barChart` <-
 function(x,
@@ -311,7 +330,20 @@ function(x,subset = NULL,
                                 BBands.col='orange',BBands.fill='#F5F5DF',
                                 BBands=list(col='orange',fill='#F5F5DF'),
                                 theme.name='beige'
-                                )
+                                ),
+                       'wsj'= 
+                            list(fg.col="#000000",bg.col="#F0F0F0",
+                                 grid.col="#ffffff",border="#444444",
+                                 minor.tick="#888888",major.tick="#000000", 
+                                 up.col="#FFFFFF",dn.col="#666666",
+                                 dn.up.col="#888888",up.up.col="#FFFFFF",
+                                 dn.dn.col="#FF0000",up.dn.col="#000000", 
+                                 up.border="#444444",dn.border="#666666",
+                                 dn.up.border="#444444",up.up.border="#444444",
+                                 dn.dn.border="#444444",up.dn.border="#444444", 
+                                 main.col = "#555555", sub.col = "#555555", area = "#d3d0af", 
+                                 fill = "#F7F7F7", Expiry = "#C9C9C9", 
+                                 theme.name = "wsj")
                      ), class='chart.theme')
 # }}}
 
@@ -345,11 +377,12 @@ function(x,
          layout=NA,
          major.ticks='auto',minor.ticks=TRUE,
          yrange=NULL,
+         plot=TRUE,
          up.col,dn.col,color.vol=TRUE,multi.col=FALSE,...
          ) {
-  sys.TZ <- Sys.getenv('TZ')
-  Sys.setenv(TZ='GMT')
-  on.exit(Sys.setenv(TZ=sys.TZ))
+  #sys.TZ <- Sys.getenv('TZ')
+  #Sys.setenv(TZ='GMT')
+  #on.exit(Sys.setenv(TZ=sys.TZ))
 
   #if(!is.xts(x)) x <- as.xts(x)
   x <- try.xts(x, error='chartSeries requires an xtsible object')
@@ -514,6 +547,9 @@ function(x,
   # re-evaluate the TA list, as it will be using stale data,
   chob@passed.args$TA <- sapply(chob@passed.args$TA, function(x) { eval(x@call) } )
 
+  if(!plot)
+    return(chob)
+  
   # draw the chart
   do.call('chartSeries.chob',list(chob))
 

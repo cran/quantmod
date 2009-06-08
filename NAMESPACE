@@ -1,4 +1,4 @@
-#useDynLib(quantmod)
+# NAMESPACE file for quantmod
 importFrom(graphics,plot)
 importFrom(stats,predict)
 importFrom(stats,lag)
@@ -12,9 +12,7 @@ importFrom(stats,residuals)
 importFrom(stats,resid)
 importFrom(stats,anova)
 importFrom(zoo,as.zoo)
-#importFrom(zoo,cbind.zoo)
-#export(ohlcz,ohlcq)
-#export(period.prod,period.sum,period.max,period.min)
+
 #export(.chob,write.chob,get.chob,release.chob)
 
 export(.chob)
@@ -30,12 +28,8 @@ export(listTA,
 
        dropTA,
        moveTA,
-       swapTA)
-
-export(zoomChart,zooom)
-
-#  No idea why these are exported?  debugging???
-#export(sM,bM)
+       swapTA
+      )
 
 export(
        # quantmod-only code
@@ -69,21 +63,22 @@ export(
        addZLEMA, 	# zero lag exponential moving average
 
       # not yet implemented
-      #addOBV,      # on balance volume
-      #addCLV,      # close location value
-      #addEMV,      # ease of movement 
-      #addKST,      # know sure thing
-      #addMFI,      # money flow index
-      #addTDI,      # trend detection index
       #addVHF,      # vertical horizontal filter
-      #addZigZag,   # Zig-Zag
-      #addAroon,    # aroon
-      #addChAD,     # chaikin AD
-      #addChVol,    # chaikin Volatility
-      #addVol,      # volatility
-      #addWAD,      # william's AD
+      #addWilliamsAD, # william's AD
 
-       addSMI,   	# stochastic moving average
+       addOBV,      # on balance volume
+       addCLV,      # close location value
+       addEMV,      # ease of movement 
+       addChAD,     # chaikin AD
+       addChVol,    # chaikin Volatility
+       addVolatility, # volatility (close, garman.klass, parkinson, rogers.satchell)
+       addZigZag,   # Zig-Zag
+       addAroon,    # aroon
+       addAroonOsc, # aroon oscillator
+       addKST,      # know sure thing
+       addMFI,      # money flow index
+       addTDI,      # trend detection index
+       addSMI,   	# stochastic momentum index
        addADX,   	# directional movement index 
        addDPO,   	# de-trended price oscillator 
        addCCI,   	# commodity channel index
@@ -124,6 +119,11 @@ export(
        seriesIncr, seriesDecr,
        seriesAccel, seriesDecel,
 
+       findPeaks,
+       findValleys,
+       peak, # deprecated
+       valley, # deprecated
+
        Delt,
        Next,
        Lag,
@@ -142,12 +142,24 @@ export(
 	specifyModel,
 	getModelData,
 #    predictModel,
+
     getFinancials,getFin,
     viewFinancials,viewFin,
+
     getDividends,
+    getSplits,
+
     getQuote,
     standardQuote,
     yahooQF,
+    yahooQuote.EOD,
+
+    getOptionChain,
+
+    attachSymbols,
+    flushSymbols,
+
+    loadSymbols,
     getSymbols,
     getSymbols.MySQL,
     getSymbols.SQLite,
@@ -160,45 +172,76 @@ export(
     getSymbols.rda,
     getSymbols.RData,
     getSymbols.google,
+
     getFX,
     getMetals,
+
     oanda.currencies,
+
+    adjustOHLC,
+
     showSymbols,
     removeSymbols,
     saveSymbols,
+
     fittedModel,
 	buildModel,
 	buildData,
+
     is.quantmod,
     is.quantmodResults,
     as.quantmod.OHLC)
-export(setSymbolLookup)
-export(getSymbolLookup)
-export(saveSymbolLookup)
-export(loadSymbolLookup)
+
+export(
+       # symbol lookup utilities
+
+       setSymbolLookup,
+       getSymbolLookup,
+       saveSymbolLookup,
+       loadSymbolLookup
+      )
+
 #export(tradeLog)
 #export(gainloss)
-export(chartSeries)
-export(reChart)
-export(barChart)
-export(lineChart)
-export(candleChart)
+
+export(
+       # main charting functions
+ 
+       chartSeries,
+       reChart,
+       saveChart,
+
+       zoomChart,
+       zooom,
+
+       barChart,
+       lineChart,
+       candleChart,
+       matchChart
+      )
+
+
+# S3 methods
 S3method(seriesHi,default)
 S3method(seriesHi,ts)
 S3method(seriesLo,default)
 S3method(seriesLo,ts)
+
 S3method(print,financials)
 S3method(print,chart.theme)
+
 S3method(Next,zoo)
 S3method(Next,numeric)
 S3method(Next,data.frame)
 S3method(Next,quantmod.OHLC)
+
 S3method(Lag,default)
 S3method(Lag,numeric)
 S3method(Lag,data.frame)
 S3method(Lag,zoo)
 S3method(Lag,xts)
 S3method(Lag,quantmod.OHLC)
+
 S3method(formula,quantmod)
 S3method(fitted,quantmod)
 S3method(fitted.values,quantmod)
@@ -212,6 +255,7 @@ S3method(anova,quantmod)
 S3method(plot,quantmod)
 S3method(plot,chobTA)
 S3method(plot,quantmodResults)
+S3method(print,quantmodResults)
 S3method(as.zoo,data.frame)
 S3method(as.zoo,quantmod.OHLC)
 S3method(as.quantmod.OHLC,data.frame)
@@ -231,10 +275,10 @@ S3method(predictModel,tree)
 S3method(predictModel,randomForest)
 
 # trade signal functionality
-export(peak, valley)
 
 exportClass(quantmod)
-exportClass(quantmodResults,quantmodReturn)
+#exportClass(quantmodResults,quantmodReturn)
+exportClass(quantmodReturn)
 exportClass(tradeLog)
 exportClass(chob,chobTA)
 exportMethods(show,summary,'fittedModel<-')

@@ -40,8 +40,7 @@ function(ta, order=NULL, on=NA, legend='auto', yrange=NULL, ...) {
   } else {
     lchob <- get.current.chob()
     chobTA <- new("chobTA")
-    chobTA@new <- ifelse(is.na(on), TRUE, FALSE)
-    if(is.na(on)) {
+    if(any(is.na(on))) {
       chobTA@new <- TRUE
     } else {
       chobTA@new <- FALSE
@@ -58,14 +57,9 @@ function(ta, order=NULL, on=NA, legend='auto', yrange=NULL, ...) {
         stop('non-xtsible data must match the length of the underlying series')
       x <- merge(lchob@xdata, ta, join='left', retside=c(FALSE,TRUE))
     }
-    if(!is.logical(ta)) {
-      x <- na.locf(x, na.rm=FALSE)
-    } else x <- as.logical(x, drop=FALSE)
+    if(is.logical(ta))
+      x <- as.logical(x, drop=FALSE)  #identical to storage.mode(x)<-"logical"
 
-    # for multicolumn TAs like MACD, get all new columns
-    # chobTA@TA.values <- coredata(x)[lchob@xsubset,(NCOL(x)-NCOL(ta)+1):NCOL(x)]
-#    if(is.logical(ta))
-#      x <- as.logical(x, drop=FALSE)
     chobTA@TA.values <- coredata(x)[lchob@xsubset,]
     chobTA@name <- "chartTA"
     chobTA@call <- match.call()
@@ -80,16 +74,16 @@ function(ta, order=NULL, on=NA, legend='auto', yrange=NULL, ...) {
                           order=order,legend=legend,
                           pars=list(list(...)),
                           time.scale=lchob@time.scale)
-   if(is.null(sys.call(-1))) {
-      TA <- lchob@passed.args$TA
-      lchob@passed.args$TA <- c(TA,chobTA)
-      lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
-      do.call('chartSeries.chob',list(lchob))
-      #quantmod:::chartSeries.chob(lchob)
-      invisible(chobTA)
-    } else {
+#   if(is.null(sys.call(-1))) {
+#      TA <- lchob@passed.args$TA
+#      lchob@passed.args$TA <- c(TA,chobTA)
+#      lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
+#      do.call('chartSeries.chob',list(lchob))
+#      #quantmod:::chartSeries.chob(lchob)
+#      invisible(chobTA)
+#    } else {
      return(chobTA)
-    }
+#    }
   }
 }#}}}
 # chartTA {{{
@@ -104,6 +98,7 @@ function(x) {
     tav <- x@TA.values
 
     if(x@new) {
+      # draw new sub-window
       y.range <- if(is.null(x@params$yrange) || length(x@params$yrange) != 2) {
                    seq(min(tav * 0.975, na.rm = TRUE), max(tav * 1.05, na.rm = TRUE),
                    length.out=length(x.range))
@@ -138,7 +133,7 @@ function(x) {
     }
 
     if(!x@new) {
-      legend <- function(legend,text.col) { list(legend=legend,text.col=text.col) }
+      legend <- function(legend,text.col,...) { list(legend=legend,text.col=text.col) }
       formals(legend) <- formals(graphics::legend)
     }
     legend.text <- list()
@@ -146,11 +141,12 @@ function(x) {
     # possibly able to handle newTA functionality
     if(is.null(x@params$legend.name)) x@params$legend.name <- deparse(x@call[-1][[1]])
 
+    x.pos <- 1 + spacing * (1:length(x.range))
     if(NCOL(tav) == 1) {
       tmp.pars <- lapply(pars,function(x) x[[1]][[1]])
       if(x@params$isLogical) {
-        do.call('rect',c(list(shading(tav)$start*spacing), list(par('usr')[3]),
-                         list(shading(tav)$end*spacing),   list(par('usr')[4]), tmp.pars))
+        do.call('rect',c(list(x.pos[shading(tav)$start-1] - spacing/3), list(par('usr')[3]),
+                         list(x.pos[shading(tav)$end-1]   + spacing/3), list(par('usr')[4]), tmp.pars))
         # do not add a legend name for background shading.  probably better to have
         # the labels in another routine
       } else {
@@ -161,7 +157,13 @@ function(x) {
       }
     } else {
       for(cols in col.order) {
-        tmp.pars <- lapply(pars,function(x) x[[cols]][[cols]])
+        tmp.pars <- lapply(pars,function(x) {
+                                              p <- try(x[[cols]][[cols]],silent=TRUE)
+                                              if(inherits(p, 'try-error')) {
+                                                stop("TA parameter length must equal number of columns", call.=FALSE)
+                                              } else p
+                                            }
+                          )
         do.call('lines',c(list(seq(1,length(x.range),by=spacing)), list(tav[,cols]), tmp.pars))
         if(cols==1) { 
           legend.text[[cols]] <- legend('topleft',

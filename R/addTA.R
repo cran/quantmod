@@ -268,7 +268,7 @@ function(x) {
 } # }}}
 
 # addATR {{{
-`addATR` <- function(n=14, maType="EMA", wilder=TRUE) {
+`addATR` <- function(n=14, maType="EMA", ...) {
 
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
@@ -281,7 +281,7 @@ function(x) {
 
   if(!is.OHLC(x)) stop("only applicable to HLC series")
 
-  atr <- ATR(cbind(Hi(x),Lo(x),Cl(x)),n=n,maType=maType,wilder=wilder)
+  atr <- ATR(cbind(Hi(x),Lo(x),Cl(x)),n=n,maType=maType,...)
 
   chobTA@TA.values <- atr[lchob@xsubset,]
   chobTA@name <- "chartATR"
@@ -295,7 +295,7 @@ function(x) {
                         bp=lchob@bp,
                         x.labels=lchob@x.labels,
                         time.scale=lchob@time.scale,
-                        n=n,maType=maType,wilder=wilder)
+                        n=n,maType=maType)
   if(is.null(sys.call(-1))) {
     TA <- lchob@passed.args$TA
     lchob@passed.args$TA <- c(TA,chobTA)
@@ -615,7 +615,7 @@ function(x) {
 
   type <- match.arg(type)
 
-  roc <- ROC(xx,n=n,type=type,na=NA)
+  roc <- ROC(xx,n=n,type=type,na.pad=TRUE)
 
   chobTA@TA.values <- roc[lchob@xsubset]
   chobTA@name <- "chartROC"
@@ -706,15 +706,7 @@ function(x) {
                         time.scale=lchob@time.scale,
                         n=n,ma=ma,sd=sd,
                         draw=draw)
-  if(is.null(sys.call(-1))) {
-    TA <- lchob@passed.args$TA
-    lchob@passed.args$TA <- c(TA,chobTA)
-    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
-    do.call('chartSeries.chob',list(lchob))
-    invisible(chobTA)
-  } else {
-   return(chobTA)
-  } 
+  return(chobTA)
 } #}}}
 # chartBBands {{{
 `chartBBands` <-
@@ -990,15 +982,7 @@ function(x) {
                         fast=fast,slow=slow,signal=signal,
                         col=col,histo=histogram
                         )
-  if(is.null(sys.call(-1))) {
-    TA <- lchob@passed.args$TA
-    lchob@passed.args$TA <- c(TA,chobTA)
-    lchob@windows <- lchob@windows + ifelse(chobTA@new,1,0)
-    do.call('chartSeries.chob',list(lchob))
-    invisible(chobTA)
-  } else {
-   return(chobTA)
-  } 
+  return(chobTA)
 } #}}}
 # chartMACD {{{
 `chartMACD` <-

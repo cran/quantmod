@@ -1,3 +1,8 @@
+cumReturn <- function(x, ...) {
+  first.value <- as.numeric(x[1])
+  (x - first.value)/first.value
+}
+
 `periodReturn` <-
 function(x,period='monthly',subset=NULL,type='arithmetic',leading=TRUE,...) {
   xx <- try.xts(x)
@@ -22,12 +27,12 @@ function(x,period='monthly',subset=NULL,type='arithmetic',leading=TRUE,...) {
                   quarterly='quarters',
                   yearly='years',
                   annually='years')
-  ep <- endpoints(xx, on=on.opts[[period]],...)
+  ep <- endpoints(xx, on=on.opts[[period]])
   ret <- Delt(Cl(FUN(x,...)),type=type)
 
   if(leading) {
     firstval <- as.numeric(Delt(getFirst(xx[1]),getLast(xx[ep[2]]),type=type))
-    ret[1,1] <- firstval
+    ret[1] <- firstval
   }
 
   colnames(ret) <- paste(period,'returns',sep='.')
@@ -93,13 +98,15 @@ function(x,subset=NULL,type='arithmetic',leading=TRUE,...) {
 
 `allReturns` <-
 function(x,subset=NULL,type='arithmetic',leading=TRUE) {
-  all.ret <- cbind.zoo(
-    periodReturn(x,'daily',type=type,leading),
+  x.orig <- x
+  x <- try.xts(x)
+  all.ret <- cbind(
+    periodReturn(x,'daily',type=type,leading=FALSE),
     periodReturn(x,'weekly',type=type),
     periodReturn(x,'monthly',type=type,indexAt='endof'),
     periodReturn(x,'quarterly',type=type,indexAt='endof'),
     periodReturn(x,'yearly',type=type)
   )
   colnames(all.ret) <- c('daily','weekly','monthly','quarterly','yearly')
-  all.ret
+  reclass(all.ret, x.orig)
 }

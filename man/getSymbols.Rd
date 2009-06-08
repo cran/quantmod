@@ -1,5 +1,6 @@
 \name{getSymbols}
 \alias{getSymbols}
+\alias{loadSymbols}
 \alias{showSymbols}
 \alias{removeSymbols}
 \alias{saveSymbols}
@@ -14,11 +15,10 @@ data sources follow an S3-like naming convention. Additional
 methods can be added by simply adhering to the convention.
 
 Current \code{src} methods available are: yahoo, google,
-MySQL, FRED, csv, RData, and Oanda.
+MySQL, FRED, csv, RData, and oanda.
 
 Data is loaded silently \emph{without} user
 assignment by default.
-
 }
 \usage{
 getSymbols(Symbols = NULL, 
@@ -31,6 +31,16 @@ getSymbols(Symbols = NULL,
            auto.assign = TRUE,
            ...)
 
+loadSymbols(Symbols = NULL, 
+            env = .GlobalEnv,
+            reload.Symbols = FALSE,
+            verbose = FALSE,
+            warnings = TRUE,
+            src = "yahoo",
+            symbol.lookup = TRUE,
+            auto.assign = TRUE,
+            ...)
+
 showSymbols(env=.GlobalEnv)
 removeSymbols(Symbols=NULL,env=.GlobalEnv)
 saveSymbols(Symbols = NULL,
@@ -40,7 +50,7 @@ saveSymbols(Symbols = NULL,
 \arguments{
        \item{Symbols}{ a character vector specifying
                        the names of each symbol to be loaded}
-       \item{env}{ where to create objects. (.GlobalEnv)}
+       \item{env}{ where to create objects. (new.env()) }
        \item{reload.Symbols}{ boolean to reload current symbols
                               in specified environment. (FALSE)}
        \item{verbose}{ boolean to turn on status of retrieval.
@@ -68,9 +78,15 @@ user explicitly assigning the returned data to a variable.
 The previous sentence's point warrants repeating - getSymbols is called
 for its side effects, and \emph{does not} return the data object
 loaded. The data is \sQuote{loaded} silently by the function
-into the user's environment - or an environment specified. This
+into a new environment by default - or the environment specified. This
 behavior can be overridden by setting auto.assign to FALSE,
 though it is not advised.
+
+Previous versions of getSymbols assigned each object into the user's
+.GlobalEnv by name.  This behavior is now supported by setting
+env=.GlobalEnv (the current transitional default),
+or by using the wrapper \code{loadSymbols}.  Many
+thanks to Kurt Hornik and Achim Zeileis for suggesting this change.
 
 By default the variable chosen is an \R-legal name derived
 from the symbol being loaded. It is possible, using
@@ -81,7 +97,13 @@ details.
 The result of a call to \code{getSymbols} when auto.assign
 is set to TRUE (the default) is a new object
 or objects in the user's specified environment - with the
-loaded symbol(s) names returned upon exit. If auto.assign is set to FALSE
+loaded symbol(s) names returned upon exit if that environment
+is the .GlobalEnv.
+
+By default, a new environment is returned which contains
+all the objects loaded into it.
+
+If auto.assign is set to FALSE
 the data will be returned from the call, and will require
 the user to assign the results himself.
 
