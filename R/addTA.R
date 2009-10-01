@@ -517,7 +517,7 @@ function(x) {
 } # }}}
 
 # addRSI {{{
-`addRSI` <- function(n=14,type='EMA',wilder=TRUE) {
+`addRSI` <- function(n=14,maType='EMA',wilder=TRUE) {
 
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
@@ -533,7 +533,7 @@ function(x) {
     Cl(x)
   } else x 
 
-  rsi <- RSI(xx,n=n,maType=type,wilder=wilder)
+  rsi <- RSI(xx,n=n,maType=maType,wilder=wilder)
   chobTA@TA.values <- rsi[lchob@xsubset]
   chobTA@name <- "chartRSI"
   chobTA@call <- match.call()
@@ -546,7 +546,7 @@ function(x) {
                         bp=lchob@bp,
                         x.labels=lchob@x.labels,
                         time.scale=lchob@time.scale,
-                        n=n, wilder=wilder,maType=type)
+                        n=n, wilder=wilder,maType=maType)
   if(is.null(sys.call(-1))) {
     TA <- lchob@passed.args$TA
     lchob@passed.args$TA <- c(TA,chobTA)
@@ -665,7 +665,7 @@ function(x) {
 } # }}}
 
 # addBBands {{{
-`addBBands` <- function(n=20,sd=2,ma='SMA',draw='bands',on=-1) {
+`addBBands` <- function(n=20,sd=2,maType='SMA',draw='bands',on=-1) {
 
   stopifnot("package:TTR" %in% search() || require("TTR",quietly=TRUE))
 
@@ -689,7 +689,7 @@ function(x) {
     cbind(Hi(x),Lo(x),Cl(x))
   } else x 
 
-  bb <- BBands(xx,n=n,maType=ma,sd=sd)
+  bb <- BBands(xx,n=n,maType=maType,sd=sd)
   
   chobTA@TA.values <- bb[lchob@xsubset,]
   chobTA@name <- "chartBBands"
@@ -704,7 +704,7 @@ function(x) {
                         bp=lchob@bp,
                         x.labels=lchob@x.labels,
                         time.scale=lchob@time.scale,
-                        n=n,ma=ma,sd=sd,
+                        n=n,ma=maType,sd=sd,
                         draw=draw)
   return(chobTA)
 } #}}}

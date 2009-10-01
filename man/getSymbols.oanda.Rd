@@ -9,7 +9,7 @@ as more that 36000 currency pairs from Oanda.com.
 Downloads \code{Symbols} to specified \code{env} from
 \url{www.oanda.com} historical currency database.
 This method is not meant to be called directly, instead
-a call to \code{getSymbols(\dQuote{x},src=\dQuote{oanda})} will
+a call to \code{getSymbols("x",src="oanda")} will
 in turn call this method. It is documented for the
 sole purpose of highlighting the arguments accepted,
 and to serve as a guide to creating additional
@@ -19,7 +19,7 @@ getSymbols 'methods'.
 getSymbols.oanda(Symbols,
                  env,
                  return.class = "xts",
-                 from = Sys.Date() - 500,
+                 from = Sys.Date() - 499,
                  to = Sys.Date(),
                  ...)
 }
@@ -40,7 +40,7 @@ available by calling \code{oanda.currencies} }
  Meant to be called internally by getSymbols only.
 
  Oanda data is 7 day daily average price data, that is Monday through Sunday.
-There is a limit of 2000 days per request, and getSymbols will
+There is a limit of 500 days per request, and getSymbols will
 fail with a warning that the limit has been exceeded.
 }
 \value{
