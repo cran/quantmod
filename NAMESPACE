@@ -13,6 +13,20 @@ importFrom(stats,resid)
 importFrom(stats,anova)
 importFrom(zoo,as.zoo)
 
+# new plotting functions (experimental)
+export(new.replot,
+       current.chob,
+       chart_Series, add_Series,
+       add_Vo,add_BBands,add_SMA,add_RSI,add_SMI,add_TA,
+       chart_theme, chart_pars,
+       add_axis,
+       add_MACD, zoom_Chart)
+
+export(axTicksByValue)
+export(axTicksByTime2)
+S3method(plot, replot)
+S3method(print, replot)
+
 #export(.chob,write.chob,get.chob,release.chob)
 
 export(.chob)
@@ -108,6 +122,15 @@ export(
        Cl, has.Cl,
        Vo, has.Vo,
        Ad, has.Ad,
+
+       # Price extraction functions
+       getPrice,
+       is.BBO, is.TBBO,
+       has.Bid,
+       has.Ask,
+       has.Price,
+       has.Trade,
+       has.Qty,
 
        OHLC, has.OHLC, is.OHLC, # OHLC extraction and test
        HLC, has.HLC, is.HLC,    # HLC  extraction and test

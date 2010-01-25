@@ -1,5 +1,6 @@
 \name{OHLC.Transformations}
 \alias{OHLC.Transformations}
+\alias{getPrice}
 \alias{Ad}
 \alias{Cl}
 \alias{ClCl}
@@ -16,6 +17,7 @@
 \alias{Vo}
 \alias{HLC}
 \alias{OHLC}
+\alias{OHLCV}
 \alias{seriesHi}
 \alias{seriesLo}
 \alias{seriesIncr}

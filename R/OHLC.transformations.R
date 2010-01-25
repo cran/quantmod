@@ -127,6 +127,11 @@ function(x)
 {
   all(has.Hi(x),has.Lo(x),has.Cl(x))# && has.HLC(x,TRUE) == seq(has.Hi(x,1),length.out=3)
 }
+is.OHLCV <- function(x)
+{
+  # test for OHLCV columns
+  all(has.Op(x),has.Hi(x),has.Lo(x),has.Cl(x),has.Vo(x))
+}
 `has.OHLC` <-
 function(x,which=FALSE)
 {
@@ -134,6 +139,14 @@ function(x,which=FALSE)
     c(has.Op(x,1),has.Hi(x,1),has.Lo(x,1),has.Cl(x,1))
   } else {
     c(has.Op(x),has.Hi(x),has.Lo(x),has.Cl(x))
+  }
+}
+has.OHLCV <- function(x,which=FALSE)
+{
+  if(which) {
+    c(has.Op(x,1),has.Hi(x,1),has.Lo(x,1),has.Cl(x,1),has.Vo(x,1))
+  } else {
+    c(has.Op(x),has.Hi(x),has.Lo(x),has.Cl(x),has.Vo(x))
   }
 }
 `has.HLC` <-
@@ -159,18 +172,24 @@ function(x)
     return(x[,has.OHLC(x,1)])
   NULL
 }
+OHLCV <- function(x)
+{
+  if(is.OHLCV(x))
+    return(x[,has.OHLCV(x,1)])
+  NULL
+}
 `Op` <-
 function(x)
 {
   if(has.Op(x))
-    return(x[,grep('Open',colnames(x))])
+    return(x[,grep('Open',colnames(x),ignore.case=TRUE)])
   stop('subscript out of bounds: no column name containing "Open"')
 }
 
 `has.Op` <-
 function(x,which=FALSE)
 {
-  loc <- grep('Open',colnames(x))
+  loc <- grep('Open',colnames(x),ignore.case=TRUE)
   if(!identical(loc,integer(0)))
     return(ifelse(which,loc,TRUE))
   ifelse(which,loc,FALSE)
@@ -180,14 +199,14 @@ function(x,which=FALSE)
 function(x)
 {
   if(has.Hi(x))
-    return(x[,grep('High',colnames(x))])
+    return(x[,grep('High',colnames(x),ignore.case=TRUE)])
   stop('subscript out of bounds: no column name containing "High"')
 }
 
 `has.Hi` <-
 function(x,which=FALSE)
 {
-  loc <- grep('High',colnames(x))
+  loc <- grep('High',colnames(x),ignore.case=TRUE)
   if(!identical(loc,integer(0)))
     return(ifelse(which,loc,TRUE))
   ifelse(which,loc,FALSE)
@@ -197,14 +216,14 @@ function(x,which=FALSE)
 function(x)
 {
   if(has.Lo(x))
-    return(x[,grep('Low',colnames(x))])
+    return(x[,grep('Low',colnames(x),ignore.case=TRUE)])
   stop('subscript out of bounds: no column name containing "Low"')
 }
 
 `has.Lo` <-
 function(x,which=FALSE)
 {
-  loc <- grep('Low',colnames(x))
+  loc <- grep('Low',colnames(x),ignore.case=TRUE)
   if(!identical(loc,integer(0)))
     return(ifelse(which,loc,TRUE))
   ifelse(which,loc,FALSE)
@@ -214,13 +233,13 @@ function(x,which=FALSE)
 function(x)
 {
   if(has.Cl(x))
-    return(x[,grep('Close',colnames(x))])
+    return(x[,grep('Close',colnames(x),ignore.case=TRUE)])
   stop('subscript out of bounds: no column name containing "Close"')
 }
 `has.Cl` <-
 function(x,which=FALSE)
 {
-  loc <- grep('Close',colnames(x))
+  loc <- grep('Close',colnames(x),ignore.case=TRUE)
   if(!identical(loc,integer(0)))
     return(ifelse(which,loc,TRUE))
   ifelse(which,loc,FALSE)
@@ -232,13 +251,13 @@ function(x)
   #vo <- grep('Volume',colnames(x))
   #if(!identical(vo,integer(0)))
   if(has.Vo(x))
-    return(x[,grep('Volume',colnames(x))])
+    return(x[,grep('Volume',colnames(x),ignore.case=TRUE)])
   stop('subscript out of bounds: no column name containing "Volume"')
 }
 `has.Vo` <-
 function(x,which=FALSE)
 {
-  loc <- grep('Volume',colnames(x))
+  loc <- grep('Volume',colnames(x),ignore.case=TRUE)
   if(!identical(loc,integer(0)))
     return(ifelse(which,loc,TRUE))
   ifelse(which,loc,FALSE)
@@ -248,13 +267,13 @@ function(x,which=FALSE)
 function(x)
 {
   if(has.Ad(x))
-    return(x[,grep('Adjusted',colnames(x))])
+    return(x[,grep('Adjusted',colnames(x),ignore.case=TRUE)])
   stop('subscript out of bounds: no column name containing "Adjusted"')
 }
 `has.Ad` <-
 function(x,which=FALSE)
 {
-  loc <- grep('Adjusted',colnames(x))
+  loc <- grep('Adjusted',colnames(x),ignore.case=TRUE)
   if(!identical(loc,integer(0)))
     return(ifelse(which,loc,TRUE))
   ifelse(which,loc,FALSE)
@@ -414,6 +433,32 @@ function(x,k=1)
     lag(x,k)
 }
 
+Delt_ <- 
+function(x1,x2=NULL,k=0,type=c('arithmetic','log'))
+{
+    x1 <- try.xts(x1, error=FALSE)
+    type <- match.arg(type[1],c('log','arithmetic'))
+    if(length(x2)!=length(x1) && !is.null(x2)) stop('x1 and x2 must be of same length');
+    if(is.null(x2)){
+        x2 <- x1 #copy for same symbol deltas
+        if(length(k) < 2) {
+            k <- max(1,k)
+        }
+    }
+    dim(x2) <- NULL  # allow for multiple k matrix math to happen
+    if(type=='log') {
+        xx <- lapply(k, function(K.) {
+                log(unclass(x2)/lag(x1,K.))
+              })
+    } else {
+        xx <- lapply(k, function(K.) {
+                unclass(x2)/lag(x1,K.)-1
+              })
+    }
+    xx <- do.call("cbind", xx)
+    colnames(xx) <- paste("Delt",k,type,sep=".")
+    reclass(xx,x1)
+}
 `Delt` <-
 function(x1,x2=NULL,k=0,type=c('arithmetic','log'))
 {

@@ -1,4 +1,11 @@
 \name{has.OHLC}
+\alias{has.Ask}
+\alias{has.Bid}
+\alias{has.Price}
+\alias{has.Qty}
+\alias{has.Trade}
+\alias{is.BBO}
+\alias{is.TBBO}
 \alias{has.Ad}
 \alias{has.Op}
 \alias{has.Hi}
@@ -6,7 +13,9 @@
 \alias{has.Cl}
 \alias{has.Vo}
 \alias{has.OHLC}
+\alias{has.OHLCV}
 \alias{is.OHLC}
+\alias{is.OHLCV}
 \alias{has.HLC}
 \alias{is.HLC}
 \title{ Check For OHLC Data }
@@ -19,6 +28,9 @@ as the availability and position of those columns.
 is.OHLC(x)
 has.OHLC(x, which = FALSE)
 
+is.OHLCV(x)
+has.OHLCV(x, which = FALSE)
+
 is.HLC(x)
 has.HLC(x, which = FALSE)
 
@@ -28,6 +40,15 @@ has.Lo(x, which = FALSE)
 has.Cl(x, which = FALSE)
 has.Vo(x, which = FALSE)
 has.Ad(x, which = FALSE)
+
+is.BBO(x)
+is.TBBO(x)
+
+has.Ask(x, which = FALSE)
+has.Bid(x, which = FALSE)
+has.Price(x, which = FALSE)
+has.Qty(x, which = FALSE)
+has.Trade(x, which = FALSE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

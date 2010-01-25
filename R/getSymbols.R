@@ -116,9 +116,9 @@ function(Symbols,env,return.class='xts',index.class="Date",
        return.class <- ifelse(is.null(return.class),default.return.class,
                               return.class)
        from <- getSymbolLookup()[[Symbols[[i]]]]$from
-       from <- ifelse(is.null(from),default.from,from)
+       from <- if(is.null(from)) default.from else from
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
-       to <- ifelse(is.null(to),default.to,to)
+       to <- if(is.null(to)) default.to else to
    
        from.y <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][1])
        from.m <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][2])-1
@@ -146,7 +146,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
        unlink(tmp)
        if(verbose) cat("done.\n")
        fr <- xts(as.matrix(fr[,-1]),
-                 as.POSIXct(fr[,1]),
+                 as.POSIXct(fr[,1], tz=Sys.getenv("TZ")),
                  src='yahoo',updated=Sys.time())
        colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
                              c('Open','High','Low','Close','Volume','Adjusted'),
@@ -832,11 +832,11 @@ function(Symbols,env,return.class='xts',
          }
        } else 
        if('timeSeries' %in% return.class) {
-         if("package:fSeries" %in% search() || suppressMessages(require("fSeries",quietly=TRUE))) {
+         if("package:timeSeries" %in% search() || suppressMessages(require("timeSeries",quietly=TRUE))) {
            fr <- timeSeries(coredata(fr), charvec=as.character(index(fr)))
            return(fr)
          } else {
-           warning(paste("'timeSeries' from package 'fSeries' could not be loaded:",
+           warning(paste("'timeSeries' from package 'timeSeries' could not be loaded:",
                    " 'xts' class returned"))
          }
        }
