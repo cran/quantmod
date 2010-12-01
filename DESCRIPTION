@@ -1,10 +1,10 @@
 Package: quantmod
 Type: Package
 Title: Quantitative Financial Modelling Framework
-Version: 0.3-14
-Date: 2010-01-25
+Version: 0.3-15
+Date: 2010-12-01
 Author: Jeffrey A. Ryan
-Depends: Defaults, xts(>= 0.7-0), zoo, TTR(>= 0.2), methods
+Depends: Defaults, xts(>= 0.7-5), zoo, TTR(>= 0.2), methods
 Suggests: DBI,RMySQL,RSQLite,timeSeries,its
 Maintainer: Jeffrey A. Ryan <jeff.a.ryan@gmail.com>
 Description: Specify, build, trade, and analyse quantitative financial
@@ -13,6 +13,6 @@ LazyLoad: yes
 License: GPL-3
 URL: http://www.quantmod.com
         http://r-forge.r-project.org/projects/quantmod
-Packaged: 2010-11-10 08:49:25 UTC; jryan
+Packaged: 2010-12-01 12:35:17 UTC; jryan
 Repository: CRAN
-Date/Publication: 2010-11-10 12:28:10
+Date/Publication: 2010-12-01 14:30:16

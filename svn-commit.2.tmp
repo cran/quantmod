@@ -1,0 +1,9 @@
+o  patched (yet again) getOptionChain.yahoo to handle
+   re-included front month in html links. r546 fixed the
+   yahoo change that dropped it, now yahoo has added it
+   back in. Consequently Exp=NULL. All better until it breaks
+   again.  Thanks to Noah Silverman for the report.
+--This line, and those below, will be ignored--
+
+M    R/getOptionChain.R
+M    DESCRIPTION

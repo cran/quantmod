@@ -30,21 +30,22 @@ getOptionChain.yahoo <- function(Symbols, Exp, ...)
     return(x)
   }
   if(missing(Exp))
-    opt <- readLines(paste("http://finance.yahoo.com/q/op?s",Symbols,sep="="))
+    opt <- readLines(paste(paste("http://finance.yahoo.com/q/op?s",Symbols,sep="="),"Options",sep="+"))
   else
-    opt <- readLines(paste("http://finance.yahoo.com/q/op?s=",Symbols,"&m=",parse.expiry(Exp),sep=""))
+    opt <- readLines(paste(paste("http://finance.yahoo.com/q/op?s=",Symbols,"&m=",parse.expiry(Exp),sep=""),"Options",sep="+"))
   opt <- opt[grep("Expire at",opt)]
+  opt <- gsub("%5E","",opt)
 
   if(!missing(Exp) && is.null(Exp)) {
     ViewByExp <- grep("View By Expiration",strsplit(opt, "<tr.*?>")[[1]])
     allExp <- substr(strsplit(strsplit(opt,"<tr.*?>")[[1]][ViewByExp],"m=")[[1]][-1],0,7)
     # fix for missing current month in links
-    allExp <- c(format(as.yearmon(allExp[1]) - 1/12, "%Y-%m"), allExp)
+    # allExp <- c(format(as.yearmon(allExp[1]) - 1/12, "%Y-%m"), allExp)
 
     return(structure(lapply(allExp, getOptionChain.yahoo, Symbols=Symbols), .Names=format(as.yearmon(allExp))))
   }
 
-  where <- cumsum(rle(sapply(gregexpr(paste("s",Symbols,sep="="),strsplit(opt, "<tr")[[1]]),
+  where <- cumsum(rle(sapply(gregexpr(paste("s",gsub("\\^","",Symbols),sep="="),strsplit(opt, "<tr")[[1]]),
                              function(x) if(x[1] > 0) TRUE else FALSE))[[1]])[c(5:8)]
   CNAMES <- c("Strike","Last","Chg","Bid","Ask","Vol","OI")
 
