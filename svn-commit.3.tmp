@@ -1,0 +1,6 @@
+o fixed bug where getSymbols src="yahoo" and adjust=TRUE was
+  failing when more than one symbol was being requested in 
+  a single call
+--This line, and those below, will be ignored--
+
+M    R/getSymbols.R
