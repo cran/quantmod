@@ -1,4 +1,8 @@
-getFin <- function(Symbol, env=.GlobalEnv, src="google", auto.assign=TRUE, ...) {
+getFin <- function(Symbol, env=parent.frame(), src="google", auto.assign=TRUE, ...) {
+  if(missing(env))
+    env <- parent.frame(1)
+  if(is.null(env))
+    auto.assign <- FALSE
   Symbol <- strsplit(Symbol,";")[[1]]
   if(length(Symbol)>1)
     return(unlist(lapply(Symbol, getFin, env=env, src=src, auto.assign=auto.assign)))
@@ -35,7 +39,7 @@ getFin <- function(Symbol, env=.GlobalEnv, src="google", auto.assign=TRUE, ...) 
   }
   fin <- lapply(1:6,
          function(x) {
-           structure(matrix(vals[[x]],nr=length(fnames[[x]]),byrow=TRUE),
+           structure(matrix(vals[[x]],nrow=length(fnames[[x]]),byrow=TRUE),
                      .Dimnames=list(fnames[[x]],make_col_names(cnames[[x]])),
                      col_desc=cnames[[x]])})
   fin <- list(IS=list(Q=fin[[1]], A=fin[[2]]),
@@ -53,7 +57,7 @@ getFin <- function(Symbol, env=.GlobalEnv, src="google", auto.assign=TRUE, ...) 
 }
 
 `.getFin` <-
-function(Symbol, env = .GlobalEnv, src='google', auto.assign = TRUE, ...) {
+function(Symbol, env = parent.frame(), src='google', auto.assign = TRUE, ...) {
   tmp <- tempfile()
   download.file(paste('http://finance.google.com/finance?fstype=ii&q=',Symbol,sep=''),
                 quiet=TRUE,destfile=tmp)
@@ -136,14 +140,14 @@ function(Symbol, env = .GlobalEnv, src='google', auto.assign = TRUE, ...) {
   # remove empty columns
   ret$IS$Q <- ret$IS$Q[,apply(ret$IS$Q,2,function(x) all(x != ''))]
   # create numeric matrix with appropriate row and col names
-  ret$IS$Q <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$IS$Q[,-1]))),nr=49),
+  ret$IS$Q <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$IS$Q[,-1]))),nrow=49),
                         dimnames=list(ret$IS$Q[,1],gsub('.*(\\d{4}-\\d{2}-\\d{2})','\\1',colnamesISCF[[1]],perl=TRUE)))
 
   # Income Statement Annual
   # remove empty columns
   ret$IS$A <- ret$IS$A[,apply(ret$IS$A,2,function(x) all(x != ''))]
   # create numeric matrix with appropriate row and col names
-  ret$IS$A <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$IS$A[,-1]))),nr=49),
+  ret$IS$A <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$IS$A[,-1]))),nrow=49),
                         dimnames=list(ret$IS$A[,1],gsub('.*(\\d{4}-\\d{2}-\\d{2})','\\1',colnamesISCF[[2]],perl=TRUE)))
 
   # identify the colnames for BS
@@ -155,28 +159,28 @@ function(Symbol, env = .GlobalEnv, src='google', auto.assign = TRUE, ...) {
   # remove empty columns
   ret$BS$Q <- ret$BS$Q[,apply(ret$BS$Q,2,function(x) all(x != ''))]
   # create numeric matrix with appropriate row and col names
-  ret$BS$Q <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$BS$Q[,-1]))),nr=40),
+  ret$BS$Q <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$BS$Q[,-1]))),nrow=40),
                         dimnames=list(ret$BS$Q[,1],gsub('.*(\\d{4}-\\d{2}-\\d{2})','\\1',colnamesBS[[1]],perl=TRUE)))
 
   # Balance Sheet Annual
   # remove empty columns
   ret$BS$A <- ret$BS$A[,apply(ret$BS$A,2,function(x) all(x != ''))]
   # create numeric matrix with appropriate row and col names
-  ret$BS$A <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$BS$A[,-1]))),nr=40),
+  ret$BS$A <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$BS$A[,-1]))),nrow=40),
                         dimnames=list(ret$BS$A[,1],gsub('.*(\\d{4}-\\d{2}-\\d{2})','\\1',colnamesBS[[2]],perl=TRUE)))
 
   # Cash Flow Quarters
   # remove empty columns
   ret$CF$Q <- ret$CF$Q[,apply(ret$CF$Q,2,function(x) all(x != ''))]
   # create numeric matrix with appropriate row and col names
-  ret$CF$Q <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$CF$Q[,-1]))),nr=19),
+  ret$CF$Q <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$CF$Q[,-1]))),nrow=19),
                         dimnames=list(ret$CF$Q[,1],gsub('.*(\\d{4}-\\d{2}-\\d{2})','\\1',colnamesISCF[[3]],perl=TRUE)))
 
   # Cash Flow Annual
   # remove empty columns
   ret$CF$A <- ret$CF$A[,apply(ret$CF$A,2,function(x) all(x != ''))]
   # create numeric matrix with appropriate row and col names
-  ret$CF$A <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$CF$A[,-1]))),nr=19),
+  ret$CF$A <- structure(matrix(as.numeric(gsub('^-$','',as.matrix(ret$CF$A[,-1]))),nrow=19),
                         dimnames=list(ret$CF$A[,1],gsub('.*(\\d{4}-\\d{2}-\\d{2})','\\1',colnamesISCF[[4]],perl=TRUE)))
 
   if(auto.assign) {  

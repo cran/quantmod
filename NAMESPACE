@@ -1,3 +1,6 @@
+export(quantmodenv, .quantmodEnv)
+S3method(print, quantmodEnv)
+
 # NAMESPACE file for quantmod
 importFrom(graphics,plot)
 importFrom(stats,predict)
@@ -17,7 +20,15 @@ importFrom(zoo,as.zoo)
 export(new.replot,
        current.chob,
        chart_Series, add_Series,
-       add_Vo,add_BBands,add_SMA,add_RSI,add_SMI,add_TA,
+       add_EMA,
+       add_EVWMA,
+       add_VMA,
+       add_WMA,
+       add_SMA,
+       add_DEMA,
+       add_VWAP,
+       add_GMMA,
+       add_Vo,add_BBands,add_RSI,add_SMI,add_TA,
        chart_theme, chart_pars,
        add_axis,
        add_MACD, zoom_Chart)
@@ -133,6 +144,7 @@ export(
        has.Qty,
 
        OHLC, has.OHLC, is.OHLC, # OHLC extraction and test
+       OHLCV, has.OHLCV, is.OHLCV, # OHLCV extraction and test
        HLC, has.HLC, is.HLC,    # HLC  extraction and test
 
        # quick delta calculation functions
@@ -190,7 +202,8 @@ export(
     getSymbols.FRED,
     getSymbols.yahoo,
     getSymbols.oanda,
-#    getSymbols.IBrokers,
+    #getSymbols.Bloomberg,
+    #getSymbols.IBrokers,
     getSymbols.csv,
     getSymbols.rda,
     getSymbols.RData,

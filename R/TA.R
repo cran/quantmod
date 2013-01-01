@@ -125,17 +125,18 @@ function(x) {
       1:NCOL(tav)
     } else x@params$order
 
-    if(is.null(x@params$legend)) legend <- function(...) {}
+    if(is.null(x@params$legend)) legend <- function(legend,text.col,...) {}
 
     if(is.character(x@params$legend) && x@params$legend != "auto") {
       legend("topleft", legend=x@params$legend, bty='n', y.inter=0.95)
-      legend <- function(...) { }
+      legend <- function(legend,text.col,...) { }
     }
 
     if(!x@new) {
       legend <- function(legend,text.col,...) { list(legend=legend,text.col=text.col) }
-      formals(legend) <- formals(graphics::legend)
     }
+
+    #formals(legend) <- alist(legend=,text.col=,...=) #formals(graphics::legend)  # all have the same formals now
     legend.text <- list()
 
     # possibly able to handle newTA functionality
@@ -221,15 +222,14 @@ function(x) {
       1:NCOL(tav)
     } else x@params$order
 
-    if(is.null(x@params$legend)) legend <- function(...) {}
+    if(is.null(x@params$legend)) legend <- function(legend,text.col,...) {}
     if(is.character(x@params$legend) && x@params$legend != "auto") {
       legend("topleft", legend=x@params$legend, bty='n', y.inter=0.95)
-      legend <- function(...) { }
+      legend <- function(legend,text.col,...) { }
     }
 
     if(!x@new) {
-      legend <- function(legend,text.col) { list(legend=legend,text.col=text.col) }
-      formals(legend) <- formals(graphics::legend)
+      legend <- function(legend,text.col,...) { list(legend=legend,text.col=text.col) }
     }
 
     legend.text <- list()

@@ -1,17 +1,46 @@
 # getSymbols {{{
 "getSymbols" <-
 function(Symbols=NULL,
-         env=.GlobalEnv,
+         env=parent.frame(),  ### 0.4-0
+         #env=NULL,          ### 0.5-0
          reload.Symbols=FALSE,
          verbose=FALSE,
          warnings=TRUE,
          src="yahoo",
          symbol.lookup=TRUE,
-         auto.assign=TRUE,
+         auto.assign=getOption('getSymbols.auto.assign',TRUE),
          ...)  {
+      if(getOption("getSymbols.warning4.0",TRUE)) {
+        # transition message for 0.4-0 to 0.5-0
+        message(paste(
+                '    As of 0.4-0,',sQuote('getSymbols'),'uses env=parent.frame() and\n',
+                'auto.assign=TRUE by default.\n\n',
+
+                'This  behavior  will be  phased out in 0.5-0  when the call  will\n',
+                'default to use auto.assign=FALSE. getOption("getSymbols.env") and \n',
+                'getOptions("getSymbols.auto.assign") are now checked for alternate defaults\n\n',
+                'This message is shown once per session and may be disabled by setting \n',
+                'options("getSymbols.warning4.0"=FALSE). See ?getSymbol for more details'))
+        options("getSymbols.warning4.0"=FALSE) 
+      }
       importDefaults("getSymbols")
+      #  to enable as-it-was behavior, set this:
+      #  options(getSymbols=list(env=substitute(parent.frame(3))))
+
+      #if(missing(env))
+      #  env <- eval(getOption("getSymbols")$env)    ### 0.5-0
+
+      if(missing(env) && !is.null(getOption("getSymbols.env")) )
+          env <- getOption("getSymbols.env")         ### 0.4-0
+
+      #env_ <- getSymbols_options_("env")
+      #if(missing(env) && !is.null(env_))
+      #  env <- env_
+      if(is.null(env)) # default as of 0.5-0
+        auto.assign <- FALSE
       if(!auto.assign && length(Symbols)>1)
         stop("must use auto.assign=TRUE for multiple Symbols requests")
+      force(Symbols)  # need to check if symbol lookup defined _within_ call
       if(symbol.lookup && missing(src)) {
         # if src is specified - override symbol.lookup
         symbols.src <- getOption('getSymbols.sources')
@@ -39,7 +68,7 @@ function(Symbols=NULL,
         Symbols <- tmp.Symbols
       }
       old.Symbols <- NULL
-      if(exists('.getSymbols',env,inherits=FALSE)) {
+      if(auto.assign && exists('.getSymbols',env,inherits=FALSE)) {
         old.Symbols <- get('.getSymbols',env)
       }
       if(reload.Symbols) {
@@ -73,9 +102,8 @@ function(Symbols=NULL,
         all.symbols <- c(all.symbols,old.Symbols)[unique(names(c(all.symbols,old.Symbols)))]
         if(auto.assign) {
           assign('.getSymbols',all.symbols,env);
-          if(identical(env, .GlobalEnv))
-            return(req.symbols)
-          return(env)
+          return(req.symbols)
+          #return(env)
         }
       } else {
         warning('no Symbols specified')
@@ -84,10 +112,105 @@ function(Symbols=NULL,
 #}}}
 
 loadSymbols <- getSymbols
-loadSymbols.formals <- formals(getSymbols)
-loadSymbols.formals$env <- substitute(.GlobalEnv)
+loadSymbols.formals <- c(formals(getSymbols)[-(8:9)], alist(auto.assign=getOption("loadSymbols.auto.assign",TRUE),...=))
 formals(loadSymbols) <- loadSymbols.formals
 
+
+# getSymbols.Bloomberg {{{
+#"getSymbols.Bloomberg" <- function(Symbols,env,return.class='xts',
+#                              from=as.POSIXlt(Sys.time()-60*60,"GMT"),
+#                              to=as.POSIXlt(Sys.time(),"GMT"),
+#                              bb.suffix="Equity",
+#                              bb.interval="5",
+#                              ...) {
+#    importDefaults("getSymbols.Bloomberg")
+#    this.env <- environment()
+#    for(var in names(list(...))) {
+#       # import all named elements that are NON formals
+#       assign(var, list(...)[[var]], this.env)
+#    }
+#    if ((class(from)=="Date" && class(to)=="Date") ||
+#           (class(from)=="character" && length(from)<=8 &&
+#               class(to)=="character" && length(to)<=8 )) {
+#       bb.intraday <- FALSE
+#       bb.call <- bdh
+#       bb.fields <- c("OPEN", "HIGH", "LOW", "PX_LAST", "VOLUME")
+#    } else {
+#       bb.intraday <- TRUE
+#       bb.call <- bar
+#       bb.fields <- "TRADE"
+#    }
+#    if(missing(verbose)) verbose <- FALSE
+#    if(missing(auto.assign)) auto.assign <- TRUE
+#       if('package:RBloomberg' %in% search() ||
+#require('RBloomberg',quietly=TRUE)) {
+#         {}
+#       } else {
+#         stop(paste("package:",dQuote('RBloomberg'),"cannot be loaded."))
+#       }
+#       bbconn <- blpConnect()
+#       for(i in 1:length(Symbols)) {
+#           bbsym <- paste(Symbols[[i]],bb.suffix)
+#
+#           if(verbose) {
+#               cat(paste('Loading ',bbsym, ' from BB ', from,' to ',to,
+#                   paste(rep('.',18-nchar(Symbols[[i]])),collapse=''),
+#                   sep=''))
+#
+#           }
+#           tryCatch (
+#             {
+#               if (bb.intraday) {
+#                 fromStr <- paste(as.character(from),".000",sep="")
+#                 toStr <- paste(as.character(to),".000",sep="")
+#                 b <- bb.call(bbconn, bbsym, bb.fields,
+#                             fromStr, toStr, bb.interval)
+#                 b$datetime <- as.POSIXct(strptime(b$time,
+#format="%Y-%m-%dT%H:%M:%S"))
+#                 bxo <- as.xts(b$open, order.by=b$datetime)
+#                 fr <- merge(bxo,  b$high, b$low, b$close, b$volume)
+#               } else {
+#                 if (class(from)=="character") {
+#                   fromStr <- from
+#                 } else {
+#                   fromStr <- strftime(from,format="%Y%m%d")
+#                 }
+#                 if (class(to)=="character") {
+#                   toStr <- to
+#                 } else {
+#                   toStr <- strftime(to,format="%Y%m%d")
+#                 }
+#                 b <- bb.call(bbconn, bbsym, bb.fields,
+#                             fromStr, toStr)
+#                 b$datetime <- as.POSIXct(strptime(b$date,
+#format="%Y-%m-%d"))
+#                 bxo <- as.xts(b$OPEN, order.by=b$datetime)
+#                 fr <- merge(bxo,  b$HIGH, b$LOW, b$PX_LAST, b$VOLUME)
+#               }
+#
+#
+#
+#               if(verbose) {
+#                 cat(paste(length(fr),'points '))
+#               }
+#               colnames(fr) <- paste(Symbols[[i]],
+#                                     c('Open','High','Low','Close','Volume'),
+#                                     sep='.')
+#               fr <- convert.time.series(fr=fr,return.class=return.class)
+#               if(auto.assign)
+#                 assign(Symbols[[i]],fr,env)
+#             },
+#             error=function(e) {print(e);fr <- data.frame()},
+#             finally=function () {if(verbose) {cat('done\n')}}
+#           )
+#       }
+#       blpDisconnect(bbconn)
+#       if(auto.assign)
+#         return(Symbols)
+#       return(fr)
+#}
+#"getSymbols.Bloomberg" <- getSymbols.Bloomberg
+# }}}
 
 # getSymbols.yahoo {{{
 "getSymbols.yahoo" <-
@@ -102,7 +225,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
-     if(!exists("adjust", environment()))
+     if(!exists("adjust", environment(), inherits=FALSE))
        adjust <- FALSE
 
      default.return.class <- return.class
@@ -147,15 +270,16 @@ function(Symbols,env,return.class='xts',index.class="Date",
        unlink(tmp)
        if(verbose) cat("done.\n")
        fr <- xts(as.matrix(fr[,-1]),
-                 as.POSIXct(fr[,1], tz=Sys.getenv("TZ")),
+                 as.Date(fr[,1]),
+                 #as.POSIXct(fr[,1], tz=Sys.getenv("TZ")),
                  src='yahoo',updated=Sys.time())
        colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
                              c('Open','High','Low','Close','Volume','Adjusted'),
                              sep='.')
        if(adjust) {
          # Adjustment algorithm by Joshua Ulrich
-         div <- getDividends(Symbols[[i]], from=from, to=to, auto.assign=FALSE)
-         spl <- getSplits(Symbols[[i]],    from=from, to=to, auto.assign=FALSE)
+         div <- getDividends(Symbols.name, from=from, to=to, auto.assign=FALSE)
+         spl <- getSplits(Symbols.name,    from=from, to=to, auto.assign=FALSE)
          adj <- na.omit(adjRatios(spl, div, Cl(fr)))
 
          fr[,1] <- fr[,1] * adj[,'Split'] * adj[,'Div']  # Open
@@ -240,6 +364,8 @@ function(Symbols,env,return.class='xts',
        colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
                              c('Open','High','Low','Close','Volume'),
                              sep='.')
+       # convert '-' to NAs
+       suppressWarnings(storage.mode(fr) <- "numeric")
        fr <- convert.time.series(fr=fr,return.class=return.class)
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
        if(auto.assign)
@@ -321,7 +447,7 @@ function(Symbols,env,return.class='xts',
 "getSymbols.MySQL" <- function(Symbols,env,return.class='xts',
                                db.fields=c('date','o','h','l','c','v','a'),
                                field.names = NULL,
-                               user=NULL,password=NULL,dbname=NULL,
+                               user=NULL,password=NULL,dbname=NULL,host='localhost',port=3306,
                                ...) {
      importDefaults("getSymbols.MySQL")
      this.env <- environment()
@@ -343,7 +469,7 @@ function(Symbols,env,return.class='xts',
               sQuote('password'),sQuote('dbname'),
               ") is not set"))
         }
-        con <- dbConnect(MySQL(),user=user,password=password,dbname=dbname)
+        con <- dbConnect("MySQL",user=user,password=password,dbname=dbname,host=host,port=port)
         db.Symbols <- dbListTables(con)
         if(length(Symbols) != sum(Symbols %in% db.Symbols)) {
           missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
@@ -419,11 +545,15 @@ function(Symbols,env,return.class='xts',
 
 # getFX {{{
 `getFX` <-
-function(Currencies,from=Sys.Date()-500,to=Sys.Date(),
-         env=.GlobalEnv,
+function(Currencies,from=Sys.Date()-499,to=Sys.Date(),
+         env=parent.frame(),
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
   importDefaults("getFX")
+  if(missing(env))
+    env <- parent.frame(1)
+  if(is.null(env))
+    auto.assign <- FALSE
   if(!auto.assign && length(Currencies) > 1)
     stop("must use auto.assign=TRUE for multiple currency requests")
   #src <- c('oanda','FRED')[pmatch(src,c('oanda','FRED'))[1]]
@@ -446,10 +576,14 @@ function(Currencies,from=Sys.Date()-500,to=Sys.Date(),
 # getMetals {{{
 `getMetals` <-
 function(Metals,from=Sys.Date()-500,to=Sys.Date(),
-         base.currency="USD",env=.GlobalEnv,
+         base.currency="USD",env=parent.frame(),
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
   importDefaults("getMetals")
+  if(missing(env))
+    env <- parent.frame(1)
+  if(is.null(env))
+    auto.assign <- FALSE
   metals <- c("XAU-GOLD","XPD-PALLADIUM","XPT-PLATINUM","XAG-SILVER")
   metals <- metals[sapply(Metals, function(x) grep(x,metals,ignore.case=TRUE))]
   metals <- as.character(sapply(metals,
@@ -501,10 +635,10 @@ function(Symbols,env,
                    
     format <- getSymbolLookup()[[Symbols[[i]]]]$format
     if(is.null(format)) format<-''
-    if(!is.null(list(...)[['format']])) {
-        format<-list(...)[['format']] # dots overrides anything we stored in setSymbolLookup
-        list(...)[['format']]<-NULL # avoid R's "formal argument "format" matched by multiple actual arguments"
-    }
+##    if(!is.null(list(...)[['format']])) {
+##        format<-list(...)[['format']] # dots overrides anything we stored in setSymbolLookup
+##        list(...)[['format']]<-NULL # avoid R's "formal argument "format" matched by multiple actual arguments"
+##    }
 
     if(verbose) cat("loading ",Symbols[[i]],".....")
     if(dir=="") {
@@ -520,7 +654,7 @@ function(Symbols,env,
     fr <- read.csv(sym.file)
     if(verbose)  
       cat("done.\n")
-    fr <- xts(fr[,-1],as.Date(fr[,1],format=format, ..., origin='1970-01-01'),src='csv',updated=Sys.time())
+    fr <- xts(fr[,-1],as.Date(fr[,1],format=format, origin='1970-01-01'),src='csv',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),
                           c('Open','High','Low','Close','Volume','Adjusted'),
                              sep='.')
@@ -578,7 +712,7 @@ function(Symbols,env,
       next
     }
     #fr <- read.csv(sym.file)
-    fr <- .readRDS(sym.file)
+    fr <- readRDS(sym.file)
     if(verbose)  
       cat("done.\n")
     if(!is.xts(fr)) fr <- xts(fr[,-1],as.Date(fr[,1],origin='1970-01-01'),src='rda',updated=Sys.time())
@@ -853,7 +987,7 @@ function(Symbols,env,return.class='xts',
 
 # removeSymbols {{{
 "removeSymbols" <- 
-function(Symbols=NULL,env=.GlobalEnv) {
+function(Symbols=NULL,env=parent.frame()) {
     if(exists('.getSymbols',env,inherits=FALSE)) {
     getSymbols <- get('.getSymbols',env,inherits=FALSE)
       if(is.null(Symbols)) {
@@ -877,7 +1011,7 @@ function(Symbols=NULL,env=.GlobalEnv) {
 
 # showSymbols {{{
 "showSymbols" <-
-function(env=.GlobalEnv) {
+function(env=parent.frame()) {
     if(exists('.getSymbols',env,inherits=FALSE)) {
         return(unlist(get('.getSymbols',env)))
     } else { return(NULL) }
@@ -886,7 +1020,7 @@ function(env=.GlobalEnv) {
 
 # saveSymbols {{{
 "saveSymbols"<-
-function(Symbols=NULL,file.path=stop("must specify 'file.path'"),env=.GlobalEnv) {
+function(Symbols=NULL,file.path=stop("must specify 'file.path'"),env=parent.frame()) {
   if(exists('.getSymbols',env,inherits=FALSE)) {
     getSymbols <- get('.getSymbols',env,inherits=FALSE)
       if(is.null(Symbols)) {

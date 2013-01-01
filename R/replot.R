@@ -4,7 +4,7 @@ new.replot <- function(frame=1,asp=1,xlim=c(1,10),ylim=list(structure(c(1,10),fi
   Env <- new.env()
   Env$frame <- frame
   Env$asp   <- asp
-  Env$usr   <- par("usr")
+  #Env$usr   <- par("usr")
   Env$xlim  <- xlim
   Env$ylim  <- ylim
   Env$pad1 <- -0 # bottom padding per frame
@@ -168,7 +168,7 @@ new.replot <- function(frame=1,asp=1,xlim=c(1,10),ylim=list(structure(c(1,10),fi
   }
 
   # prepare window to draw
-  set_window()
+  #set_window()
   # return
   replot_env <- new.env()
   class(replot_env) <- c("replot","environment")
@@ -203,7 +203,8 @@ str.replot <- function(x, ...) {
 print.replot <- function(x, ...) plot(x,...)
 plot.replot <- function(x, ...) {
   plot.new()
-  assign(".chob",x,.GlobalEnv)
+  #assign(".chob",x,.GlobalEnv)
+  assign(".chob",x,.plotEnv)
   cex <- par(cex=x$Env$cex)
   mar <- par(mar=x$Env$mar)
   if(.Device=="X11") # only reasonable way to fix X11/quartz issue
@@ -262,7 +263,7 @@ scale.ranges <- function(frame, asp, ranges)
 }
 
 `+.replot` <- function(e1, e2) {
-  assign(".chob",e1,.GlobalEnv)
+  assign(".chob",e1,.plotEnv)
   e2 <- eval(e2)
   e2
 }

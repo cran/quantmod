@@ -1,9 +1,13 @@
 `getSplits` <-
-function(Symbol,from='1970-01-01',to=Sys.Date(),env=.GlobalEnv,src='yahoo',
+function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
          auto.assign=FALSE,auto.update=FALSE,verbose=FALSE,...) {
 
   # Function written by Joshua Ulrich, using
   # getSymbols.yahoo as a guide.
+  if(missing(env))
+    env <- parent.frame(1)
+  if(is.null(env))
+    auto.assign <- FALSE
   Symbol.name <- ifelse(!is.character(Symbol),
                         deparse(substitute(Symbol)),
                         as.character(Symbol))

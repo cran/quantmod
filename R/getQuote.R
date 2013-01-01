@@ -5,9 +5,11 @@
 # getQuote.OpenTick
 
 `getQuote` <-
-function(Symbols,src='yahoo',what=standardQuote(), ...) {
-  if(src != 'yahoo') stop('no additional src methods available yet')
-  do.call(paste('getQuote',src,sep='.'), list(Symbols=Symbols,what=what,...))
+function(Symbols,src='yahoo',what, ...) {
+  args <- list(Symbols=Symbols,...)
+  if(!missing(what))
+      args$what <- what
+  do.call(paste('getQuote',src,sep='.'), args)
 }
 
 `getQuote.yahoo` <-
@@ -27,7 +29,7 @@ function(Symbols,what=standardQuote(),...) {
     for(i in 1:length(all.symbols)) {
       Sys.sleep(0.5)
       cat(i,", ")
-      df <- rbind(df, getQuote.yahoo(all.symbols[[i]]))
+      df <- rbind(df, getQuote.yahoo(all.symbols[[i]],what))
     }
     cat("...done\n")
     return(df)
@@ -45,7 +47,7 @@ function(Symbols,what=standardQuote(),...) {
                 "http://finance.yahoo.com/d/quotes.csv?s=",
                 Symbols,
                 "&f=",QF,sep=""),
-                dest=tmp,quiet=TRUE)
+                destfile=tmp,quiet=TRUE)
   sq <- read.csv(file=tmp,sep=',',stringsAsFactors=FALSE,header=FALSE)
   unlink(tmp)
   Qposix <- strptime(paste(sq[,1],sq[,2]),format='%m/%d/%Y %H:%M')
