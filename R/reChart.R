@@ -1,13 +1,13 @@
 `reChart` <-
-function (type = c("auto", "candlesticks", "matchsticks", 
-    "bars", "line"), subset = NULL, show.grid = TRUE, name = NULL, 
-    time.scale = NULL, line.type = "l", bar.type = "ohlc", 
+function (type = c("auto", "candlesticks", "matchsticks",
+    "bars", "line"), subset = NULL, show.grid = TRUE, name = NULL,
+    time.scale = NULL, line.type = "l", bar.type = "ohlc",
     theme = chartTheme("black"),
-    major.ticks = "auto", minor.ticks = TRUE, 
+    major.ticks = "auto", minor.ticks = TRUE,
     yrange=NULL,
-    up.col, dn.col, color.vol = TRUE, multi.col = FALSE, ...) 
+    up.col, dn.col, color.vol = TRUE, multi.col = FALSE, ...)
 {
-  chob <- quantmod:::get.current.chob()
+  chob <- get.current.chob()
 
   #sys.TZ <- Sys.getenv('TZ')
   #Sys.setenv(TZ='GMT')
@@ -50,28 +50,28 @@ function (type = c("auto", "candlesticks", "matchsticks",
         if (strsplit(subset, " ")[[1]][1] %in% c("first", "last")) {
             subsetvec <- strsplit(subset, " ")[[1]]
             if (length(subsetvec) < 3) {
-                subset.n <- ifelse(length(subsetvec) == 1, 1L, 
+                subset.n <- ifelse(length(subsetvec) == 1, 1L,
                   as.numeric(subsetvec[2]))
-            }   
+            }
             else {
                 subset.n <- paste(subsetvec[2:3], collapse = " ")
-            }   
-            sub.index <- index(do.call(subsetvec[1], list(x, 
+            }
+            sub.index <- index(do.call(subsetvec[1], list(x,
                 subset.n)))
             xsubset <- which(index(x) %in% sub.index)
-        }   
+        }
         else xsubset <- which(index(x) %in% index(x[subset]))
     }
     else xsubset <- 1:NROW(x)
-  
+
     if(!is.null(subset)) {
       chob@xsubset <- xsubset
       x <- x[xsubset,]
       chob@xrange <- c(1, NROW(x))
       if (is.OHLC(x)) {
-        chob@yrange <- c(min(Lo(x), na.rm = TRUE), max(Hi(x), 
+        chob@yrange <- c(min(Lo(x), na.rm = TRUE), max(Hi(x),
             na.rm = TRUE))
-      }   
+      }
       else chob@yrange <- range(x[, 1], na.rm = TRUE)
       if(!is.null(yrange) && length(yrange)==2) chob@yrange <- yrange
     }
@@ -102,7 +102,7 @@ function (type = c("auto", "candlesticks", "matchsticks",
   ########### end chartTheme ##########
 
   ########### multi.col ##########
-  if(missing(theme) & !missing(multi.col) ) 
+  if(missing(theme) & !missing(multi.col) )
     stop(paste(sQuote('theme'),'must be specified in conjunction with',
          sQuote('multi.col')))
   theme <- chob@colors
@@ -124,11 +124,11 @@ function (type = c("auto", "candlesticks", "matchsticks",
       Volumes <- as.numeric(Vo(x))
       show.vol <- TRUE
     } else show.vol <- FALSE
-  
+
     if(missing(time.scale)) {
       time.scale <- chob@time.scale
     }
-  
+
     if(!missing(up.col)) theme$up.col <- up.col
     if(!missing(dn.col)) theme$dn.col <- dn.col
     if(!multi.col) { # interpret as FALSE
@@ -153,11 +153,11 @@ function (type = c("auto", "candlesticks", "matchsticks",
   chob@color.vol <- color.vol
   ########### end multi.col ##########
 
-  chob@passed.args$TA <- sapply(chob@passed.args$TA, 
+  chob@passed.args$TA <- sapply(chob@passed.args$TA,
     function(x) eval(x@call)
-  )   
+  )
 
-  quantmod:::chartSeries.chob(chob)
+  chartSeries.chob(chob)
 
   chob@device <- as.numeric(dev.cur())
 

@@ -11,7 +11,7 @@
   } else stop('FUN required to be a function object')
 
   # create a text string of the function for inclusion in .body
-  funToFun <- function (x, fun.name, drop.arg = 1, dots=TRUE) 
+  funToFun <- function (x, fun.name, drop.arg = 1, dots=TRUE)
   {
       drop.arg <- if (any(drop.arg < 1)) {
           1:length(formals(x))
@@ -21,10 +21,10 @@
       if( !dots && ('...' %in% fnames) )
         fnames <- fnames[-which('...' == fnames)]
 
-      fun.args <- paste(fnames, "=", 
+      fun.args <- paste(fnames, "=",
           c('x',fnames[drop.arg]), sep = "")
       fun.args <- paste(gsub("=\\.\\.\\.", "", fun.args), collapse = ",")
-      paste(fun.name, "(", fun.args, ")", 
+      paste(fun.name, "(", fun.args, ")",
           collapse = "", sep = "")
   }
 
@@ -37,7 +37,7 @@
     .body[22] <- paste("legend.name <- gsub('^.*[(]',",paste('\'',legend.name,'(\''),
                        #",deparse(match.call()),extended=TRUE)")
                        ",deparse(match.call()))")
-  }  
+  }
 
   # cdots: should the newTA object have a ... arg?
   # if the function uses, the call must too
@@ -94,12 +94,12 @@
   .body[5] <- paste("x <-",funToFun(FUN,FUN.name,data.at, dots=fdots))
   if(.body[6] == 'postFUN <- ""') .body[6] <- ''
   if(.body[4] == 'preFUN <- ""' ) .body[4] <- ''
-  as.function(c(.formals,as.call(parse(text=.body))[[1]]),.GlobalEnv) 
+  as.function(c(.formals,as.call(parse(text=.body))[[1]]),.GlobalEnv)
 }
 
 `skeleton.TA` <- function(on)
 {
-    lchob <- quantmod:::get.current.chob()
+    lchob <- get.current.chob()
     x <- as.matrix(lchob@xdata)
     preFUN  <- ""
     FUN     <- ""
@@ -120,18 +120,17 @@
     chobTA@call <- match.call()
     legend.name <- gsub('^add','',deparse(match.call()))
     gpars <- list()
-    chobTA@params <- list(xrange = lchob@xrange, yrange=yrange, colors = lchob@colors, 
-        color.vol = lchob@color.vol, multi.col = lchob@multi.col, 
-        spacing = lchob@spacing, width = lchob@width, bp = lchob@bp, 
+    chobTA@params <- list(xrange = lchob@xrange, yrange=yrange, colors = lchob@colors,
+        color.vol = lchob@color.vol, multi.col = lchob@multi.col,
+        spacing = lchob@spacing, width = lchob@width, bp = lchob@bp,
         x.labels = lchob@x.labels, time.scale = lchob@time.scale,
-        isLogical=is.logical(x),legend = legend, legend.name = legend.name, pars = list(gpars)) 
+        isLogical=is.logical(x),legend = legend, legend.name = legend.name, pars = list(gpars))
     if (is.null(sys.call(-1))) {
         TA <- lchob@passed.args$TA
         lchob@passed.args$TA <- c(TA, chobTA)
-        lchob@windows <- lchob@windows + ifelse(chobTA@new, 1, 
+        lchob@windows <- lchob@windows + ifelse(chobTA@new, 1,
             0)
-        chartSeries.chob <- quantmod:::chartSeries.chob
-        do.call('chartSeries.chob',list(lchob))
+        do.call(chartSeries.chob,list(lchob))
         invisible(chobTA)
     }
     else {

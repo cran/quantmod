@@ -20,7 +20,7 @@ shading <- function(x)
   # also from new addEvents function
   #
   # ex. rect(shading$start-spacing, par('usr')[3],
-  #          shading$end-spacing, par('usr')[3])    
+  #          shading$end-spacing, par('usr')[3])
   if( !is.logical(x) )
     warning('need logical object')
   runs <- rle(as.logical(x))
@@ -47,9 +47,9 @@ function(ta, order=NULL, on=NA, legend='auto', yrange=NULL, ...) {
       chobTA@on  <- on
     }
     nrc <- NROW(lchob@xdata)
-  
+
     ta <- try.xts(ta, error=FALSE)
-  
+
     if(is.xts(ta)) {
       x <- merge(lchob@xdata, ta, fill=ifelse(is.logical(ta),0,NA),join='left', retside=c(FALSE,TRUE))
     } else {
@@ -166,7 +166,7 @@ function(x) {
                                             }
                           )
         do.call('lines',c(list(seq(1,length(x.range),by=spacing)), list(tav[,cols]), tmp.pars))
-        if(cols==1) { 
+        if(cols==1) {
           legend.text[[cols]] <- legend('topleft',
                  legend=c(paste(x@params$legend.name,":")),
                  text.col=c(x@params$colors$fg.col,last(pars$col[[cols]])),bty='n',y.inter=.95)
@@ -177,7 +177,7 @@ function(x) {
                legend=c(rep('',cols),paste(Col.title,":",
                         sprintf("%.3f",last(na.omit(tav[,cols]))))),
                text.col=pars$col[[cols]][cols],bty='n',y.inter=.95)
-      } 
+      }
     }
 
     axis(2)
@@ -251,7 +251,7 @@ function(x) {
       for(cols in col.order) {
         tmp.pars <- lapply(pars,function(x) x[[cols]][[cols]])
 #        do.call('lines',c(list(seq(1,length(x.range),by=spacing)), list(tav[,cols]), tmp.pars))
-        if(cols==1) { 
+        if(cols==1) {
           legend.text[[cols]] <- legend('topleft',
                  legend=c(paste(x@params$legend.name,":")),
                  text.col=c(x@params$colors$fg.col,last(pars$col[[cols]])),bty='n',y.inter=.95)
@@ -262,7 +262,7 @@ function(x) {
                legend=c(rep('',cols),paste(Col.title,":",
                         sprintf("%.3f",last(na.omit(tav[,cols]))))),
                text.col=pars$col[[cols]][cols],bty='n',y.inter=.95)
-      } 
+      }
     }
 
     axis(2)
@@ -273,16 +273,16 @@ function(x) {
 # setTA {{{
 `setTA` <-
 function(type=c('chartSeries','barChart','candleChart')) {
-  if('chartSeries' %in% type) setDefaults(chartSeries,TA=listTA())
-  if('barChart' %in% type) setDefaults(barChart,TA=listTA())
-  if('candleChart' %in% type) setDefaults(candleChart,TA=listTA())
+  if('chartSeries' %in% type) Defaults::setDefaults(chartSeries,TA=listTA())
+  if('barChart' %in% type) Defaults::setDefaults(barChart,TA=listTA())
+  if('candleChart' %in% type) Defaults::setDefaults(candleChart,TA=listTA())
 }# }}}
 # unsetTA {{{
 `unsetTA` <-
 function(type=c('chartSeries','barChart','candleChart')) {
-  if('chartSeries' %in% type) setDefaults(chartSeries,TA=NULL)
-  if('barChart' %in% type) setDefaults(barChart,TA=NULL)
-  if('candleChart' %in% type) setDefaults(candleChart,TA=NULL)
+  if('chartSeries' %in% type) Defaults::setDefaults(chartSeries,TA=NULL)
+  if('barChart' %in% type) Defaults::setDefaults(barChart,TA=NULL)
+  if('candleChart' %in% type) Defaults::setDefaults(candleChart,TA=NULL)
 }# }}}
 # listTA {{{
 `listTA` <-

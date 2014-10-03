@@ -21,9 +21,10 @@ function(Symbols=NULL,
                 'getOptions("getSymbols.auto.assign") are now checked for alternate defaults\n\n',
                 'This message is shown once per session and may be disabled by setting \n',
                 'options("getSymbols.warning4.0"=FALSE). See ?getSymbol for more details'))
-        options("getSymbols.warning4.0"=FALSE) 
+        options("getSymbols.warning4.0"=FALSE)
       }
-      importDefaults("getSymbols")
+      if(requireNamespace('Defaults'))
+          Defaults::importDefaults("getSymbols")
       #  to enable as-it-was behavior, set this:
       #  options(getSymbols=list(env=substitute(parent.frame(3))))
 
@@ -96,7 +97,7 @@ function(Symbols=NULL,
                                            ...))
           if(!auto.assign)
             return(symbols.returned)
-          for(each.symbol in symbols.returned) all.symbols[[each.symbol]] <- symbol.source 
+          for(each.symbol in symbols.returned) all.symbols[[each.symbol]] <- symbol.source
         }
         req.symbols <- names(all.symbols)
         all.symbols <- c(all.symbols,old.Symbols)[unique(names(c(all.symbols,old.Symbols)))]
@@ -219,7 +220,8 @@ function(Symbols,env,return.class='xts',index.class="Date",
          to=Sys.Date(),
          ...)
 {
-     importDefaults("getSymbols.yahoo")
+     if(requireNamespace('Defaults'))
+         Defaults::importDefaults("getSymbols.yahoo")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -243,14 +245,14 @@ function(Symbols,env,return.class='xts',index.class="Date",
        from <- if(is.null(from)) default.from else from
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- if(is.null(to)) default.to else to
-   
+
        from.y <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][1])
        from.m <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][2])-1
        from.d <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][3])
        to.y <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][1])
        to.m <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][2])-1
        to.d <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][3])
-       
+
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        if(verbose) cat("downloading ",Symbols.name,".....\n\n")
@@ -293,7 +295,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
        if(is.xts(fr))
          indexClass(fr) <- index.class
 
-       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
        if(i >= 5 && length(Symbols) > 5) {
@@ -315,7 +317,8 @@ function(Symbols,env,return.class='xts',
          ...)
 {
      fix.google.bug <- TRUE
-     importDefaults("getSymbols.google")
+     if(requireNamespace('Defaults'))
+         Defaults::importDefaults("getSymbols.google")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -367,7 +370,7 @@ function(Symbols,env,return.class='xts',
        # convert '-' to NAs
        suppressWarnings(storage.mode(fr) <- "numeric")
        fr <- convert.time.series(fr=fr,return.class=return.class)
-       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
      }
@@ -385,7 +388,8 @@ function(Symbols,env,return.class='xts',
                                dbname=NULL,
                                POSIX = TRUE,
                                ...) {
-     importDefaults("getSymbols.SQLite")
+     if(requireNamespace('Defaults'))
+         Defaults::importDefaults("getSymbols.SQLite")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -399,9 +403,9 @@ function(Symbols,env,return.class='xts',
         } else {
           stop(paste("package:",dQuote('DBI'),"cannot be loaded."))
         }
-        drv <- dbDriver("SQLite")
-        con <- dbConnect(drv,dbname=dbname)
-        db.Symbols <- dbListTables(con)
+        drv <- DBI::dbDriver("SQLite")
+        con <- DBI::dbConnect(drv,dbname=dbname)
+        db.Symbols <- DBI::dbListTables(con)
         if(length(Symbols) != sum(Symbols %in% db.Symbols)) {
           missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
                 warning(paste('could not load symbol(s): ',paste(missing.db.symbol,collapse=', ')))
@@ -417,8 +421,8 @@ function(Symbols,env,return.class='xts',
                            paste(db.fields,collapse=','),
                            " FROM ",Symbols[[i]],
                            " ORDER BY row_names")
-            rs <- dbSendQuery(con, query)
-            fr <- fetch(rs, n=-1)
+            rs <- DBI::dbSendQuery(con, query)
+            fr <- DBI::fetch(rs, n=-1)
             #fr <- data.frame(fr[,-1],row.names=fr[,1])
             if(POSIX) {
               d <- as.numeric(fr[,1])
@@ -435,7 +439,7 @@ function(Symbols,env,return.class='xts',
               assign(Symbols[[i]],fr,env)
             if(verbose) cat('done\n')
         }
-        dbDisconnect(con)
+        DBI::dbDisconnect(con)
         if(auto.assign)
           return(Symbols)
         return(fr)
@@ -449,7 +453,8 @@ function(Symbols,env,return.class='xts',
                                field.names = NULL,
                                user=NULL,password=NULL,dbname=NULL,host='localhost',port=3306,
                                ...) {
-     importDefaults("getSymbols.MySQL")
+     if(requireNamespace('Defaults'))
+         Defaults::importDefaults("getSymbols.MySQL")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -469,8 +474,8 @@ function(Symbols,env,return.class='xts',
               sQuote('password'),sQuote('dbname'),
               ") is not set"))
         }
-        con <- dbConnect("MySQL",user=user,password=password,dbname=dbname,host=host,port=port)
-        db.Symbols <- dbListTables(con)
+        con <- DBI::dbConnect("MySQL",user=user,password=password,dbname=dbname,host=host,port=port)
+        db.Symbols <- DBI::dbListTables(con)
         if(length(Symbols) != sum(Symbols %in% db.Symbols)) {
           missing.db.symbol <- Symbols[!Symbols %in% db.Symbols]
                 warning(paste('could not load symbol(s): ',paste(missing.db.symbol,collapse=', ')))
@@ -481,8 +486,8 @@ function(Symbols,env,return.class='xts',
                 cat(paste('Loading ',Symbols[[i]],paste(rep('.',10-nchar(Symbols[[i]])),collapse=''),sep=''))
             }
             query <- paste("SELECT ",paste(db.fields,collapse=',')," FROM ",Symbols[[i]]," ORDER BY date")
-            rs <- dbSendQuery(con, query)
-            fr <- fetch(rs, n=-1)
+            rs <- DBI::dbSendQuery(con, query)
+            fr <- DBI::fetch(rs, n=-1)
             #fr <- data.frame(fr[,-1],row.names=fr[,1])
             fr <- xts(as.matrix(fr[,-1]),
                       order.by=as.Date(fr[,1],origin='1970-01-01'),
@@ -495,7 +500,7 @@ function(Symbols,env,return.class='xts',
               assign(Symbols[[i]],fr,env)
             if(verbose) cat('done\n')
         }
-        dbDisconnect(con)
+        DBI::dbDisconnect(con)
         if(auto.assign)
           return(Symbols)
         return(fr)
@@ -506,7 +511,8 @@ function(Symbols,env,return.class='xts',
 # getSymbols.FRED {{{
 `getSymbols.FRED` <- function(Symbols,env,
      return.class="xts", ...) {
-     importDefaults("getSymbols.FRED")
+     if(requireNamespace('Defaults'))
+         Defaults::importDefaults("getSymbols.FRED")
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -532,7 +538,7 @@ function(Symbols,env,return.class='xts',
        dim(fr) <- c(NROW(fr),1)
        colnames(fr) <- as.character(toupper(Symbols[[i]]))
        fr <- convert.time.series(fr=fr,return.class=return.class)
-       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
      }
@@ -549,7 +555,8 @@ function(Currencies,from=Sys.Date()-499,to=Sys.Date(),
          env=parent.frame(),
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
-  importDefaults("getFX")
+  if(requireNamespace('Defaults'))
+        Defaults::importDefaults("getFX")
   if(missing(env))
     env <- parent.frame(1)
   if(is.null(env))
@@ -569,7 +576,7 @@ function(Currencies,from=Sys.Date()-499,to=Sys.Date(),
                    auto.assign=auto.assign,...)
   #} else {
   #  getSymbols.FRED(Symbols=Currencies,env=env,verbose=verbose,warning=warning,...)
-  #}  
+  #}
 }
 #}}}
 
@@ -579,7 +586,8 @@ function(Metals,from=Sys.Date()-500,to=Sys.Date(),
          base.currency="USD",env=parent.frame(),
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
-  importDefaults("getMetals")
+  if(requireNamespace('Defaults'))
+    Defaults::importDefaults("getMetals")
   if(missing(env))
     env <- parent.frame(1)
   if(is.null(env))
@@ -591,7 +599,7 @@ function(Metals,from=Sys.Date()-500,to=Sys.Date(),
                      paste(strsplit(x,'-')[[1]][1],base.currency,sep="/")
                    }))
   getSymbols.oanda(Symbols=metals,from=from,to=to,auto.assign=auto.assign,
-                   env=env,verbose=verbose,warning=warning,...) 
+                   env=env,verbose=verbose,warning=warning,...)
 }
 #}}}
 
@@ -609,7 +617,8 @@ function(Symbols,env,
          return.class="xts",
          extension="csv",
          ...) {
-  importDefaults("getSymbols.csv")
+  if(requireNamespace('Defaults'))
+    Defaults::importDefaults("getSymbols.csv")
   this.env <- environment()
   for(var in names(list(...))) {
     assign(var,list(...)[[var]], this.env)
@@ -632,7 +641,7 @@ function(Symbols,env,
     extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
     extension <- ifelse(is.null(extension),default.extension,
                            extension)
-                   
+
     format <- getSymbolLookup()[[Symbols[[i]]]]$format
     if(is.null(format)) format<-''
 ##    if(!is.null(list(...)[['format']])) {
@@ -652,14 +661,14 @@ function(Symbols,env,
       next
     }
     fr <- read.csv(sym.file)
-    if(verbose)  
+    if(verbose)
       cat("done.\n")
     fr <- xts(fr[,-1],as.Date(fr[,1],format=format, origin='1970-01-01'),src='csv',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),
                           c('Open','High','Low','Close','Volume','Adjusted'),
                              sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
-    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
     if(auto.assign)
       assign(Symbols[[i]],fr,env)
     }
@@ -677,7 +686,8 @@ function(Symbols,env,
          extension="rds",
          col.names=c('Open','High','Low','Close','Volume','Adjusted'),
          ...) {
-  importDefaults("getSymbols.rds")
+  if(requireNamespace('Defaults'))
+    Defaults::importDefaults("getSymbols.rds")
   this.env <- environment()
   for(var in names(list(...))) {
     assign(var,list(...)[[var]], this.env)
@@ -713,12 +723,12 @@ function(Symbols,env,
     }
     #fr <- read.csv(sym.file)
     fr <- readRDS(sym.file)
-    if(verbose)  
+    if(verbose)
       cat("done.\n")
     if(!is.xts(fr)) fr <- xts(fr[,-1],as.Date(fr[,1],origin='1970-01-01'),src='rda',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),col.names,sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
-    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
     if(auto.assign)
       assign(Symbols[[i]],fr,env)
     }
@@ -736,7 +746,8 @@ function(Symbols,env,
          extension="rda",
          col.names=c('Open','High','Low','Close','Volume','Adjusted'),
          ...) {
-  importDefaults("getSymbols.rda")
+  if(requireNamespace('Defaults'))
+    Defaults::importDefaults("getSymbols.rda")
   this.env <- environment()
   for(var in names(list(...))) {
     assign(var,list(...)[[var]], this.env)
@@ -773,12 +784,12 @@ function(Symbols,env,
     #fr <- read.csv(sym.file)
     local.name <- load(sym.file)
     assign('fr',get(local.name))
-    if(verbose)  
+    if(verbose)
       cat("done.\n")
     if(!is.xts(fr)) fr <- xts(fr[,-1],as.Date(fr[,1],origin='1970-01-01'),src='rda',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),col.names,sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
-    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
     if(auto.assign)
       assign(Symbols[[i]],fr,env)
     }
@@ -797,7 +808,8 @@ function(Symbols,env,
 endDateTime, barSize='1 day', duration='1 M',
 useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
 {
-  importDefaults('getSymbols.IBrokers')
+  if(requireNamespace('Defaults'))
+    Defaults::importDefaults('getSymbols.IBrokers')
   this.env <- environment()
   for(var in names(list(...))) {
     assign(var, list(...)[[var]], this.env)
@@ -809,9 +821,9 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
   if(is.method.available("twsConnect","IBrokers")) {
     tws <- do.call('twsConnect',list(clientId=1001))
     on.exit(do.call('twsDisconnect',list(tws)))
-  
+
     if(missing(endDateTime)) endDateTime <- NULL
-  
+
     for(i in 1:length(Symbols)) {
       Contract <- getSymbolLookup()[[Symbols[i]]]$Contract
       if(inherits(Contract,'twsContract')) {
@@ -836,7 +848,7 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
     }
     if(auto.assign)
       return(Symbols)
-    return(fr) 
+    return(fr)
   }
 }
 # }}}
@@ -871,7 +883,8 @@ function(Symbols,env,return.class='xts',
          from=Sys.Date()-499,
          to=Sys.Date(),
          ...) {
-     importDefaults("getSymbols.oanda")
+     if(requireNamespace('Defaults'))
+       Defaults::importDefaults("getSymbols.oanda")
      if( (as.Date(to)-as.Date(from)) > 500 )
        stop("oanda.com limits data to 500 days per request", call.=FALSE)
      this.env <- environment()
@@ -898,14 +911,14 @@ function(Symbols,env,return.class='xts',
        from <- ifelse(is.null(from),default.from,from)
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- ifelse(is.null(to),default.to,to)
-   
+
        if(as.Date(to,origin='1970-01-01')-as.Date(from,origin='1970-01-01') > 499) stop("oanda limits data to 500 days")
        # automatically break larger requests into equal sized smaller request at some point
        # for now just let it remain
 
        from.date <- format(as.Date(from,origin='1970-01-01'),"date1=%m%%2F%d%%2F%y&")
        to.date <- format(as.Date(to,origin='1970-01-01'),"date=%m%%2F%d%%2F%y&date_fmt=us&")
-       
+
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        currency.pair <- strsplit(toupper(Symbols.name),"/")[[1]]
@@ -931,7 +944,7 @@ function(Symbols,env,return.class='xts',
        dim(fr) <- c(length(fr),1)
        colnames(fr) <- gsub("/",".",Symbols[[i]])
        fr <- convert.time.series(fr=fr,return.class=return.class)
-       Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]])) 
+       Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]]))
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
      }
@@ -973,20 +986,15 @@ function(Symbols,env,return.class='xts',
            warning(paste("'its' from package 'its' could not be loaded:",
                          " 'xts' class returned"))
          }
-       } else 
+       } else
        if('timeSeries' %in% return.class) {
-         if("package:timeSeries" %in% search() || suppressMessages(require("timeSeries",quietly=TRUE))) {
-           fr <- timeSeries(coredata(fr), charvec=as.character(index(fr)))
+           fr <- timeSeries::timeSeries(coredata(fr), charvec=as.character(index(fr)))
            return(fr)
-         } else {
-           warning(paste("'timeSeries' from package 'timeSeries' could not be loaded:",
-                   " 'xts' class returned"))
-         }
        }
 }#}}}
 
 # removeSymbols {{{
-"removeSymbols" <- 
+"removeSymbols" <-
 function(Symbols=NULL,env=parent.frame()) {
     if(exists('.getSymbols',env,inherits=FALSE)) {
     getSymbols <- get('.getSymbols',env,inherits=FALSE)
@@ -1033,7 +1041,7 @@ function(Symbols=NULL,file.path=stop("must specify 'file.path'"),env=parent.fram
       save(list=each.symbol,
            file=paste(file.path,'/',each.symbol,".RData",sep=''),
            env=env)
-    }    
+    }
   }
 }
 # }}}

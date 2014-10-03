@@ -29,9 +29,9 @@ function(name=TRUE,last=TRUE) {
     }
   }
   #exp <- expression(plot_axis(x=current.chob(),show.last=last,show.name=name))
-  exp <- parse(text = gsub("list", "plot_axis", as.expression(substitute(list(x = current.chob(), 
+  exp <- parse(text = gsub("list", "plot_axis", as.expression(substitute(list(x = current.chob(),
                show.last=last, show.name=name,...)))), srcfile = NULL)
-  plot_object <- quantmod:::current.chob()
+  plot_object <- current.chob()
   plot_object$Env$mar <- c(3,1,0,if(name & last) if(plot_object$Env$theme$rylab) 5 else 4 else 3)
   lenv$xdata <- plot_object$Env$xdata
   plot_object$set_frame(2,clip=FALSE)
@@ -52,7 +52,7 @@ function(side, at=NULL, labels=TRUE, tick=TRUE, line=NA, pos=NA, font=NA, col=NU
       labels <- pretty(xdata[xsubset])
       dropped_label <- which(labels < min(xdata[xsubset],na.rm=TRUE))
       labels <- labels[-dropped_label]
-    } 
+    }
     if(is.null(at))
       at <- labels
     if(side==2) {
@@ -70,10 +70,10 @@ function(side, at=NULL, labels=TRUE, tick=TRUE, line=NA, pos=NA, font=NA, col=NU
       assign(name, value, envir = lenv)
   }, names(list(side=side,at=at,labels=labels,font=font,tick=tick,pos=pos,col=col)),
      list(side=side,at=at,labels=labels,font=font,tick=tick,pos=pos,col=col))
-  exp <- parse(text = gsub("list", "plot_axis", as.expression(substitute(list(x = current.chob(), 
+  exp <- parse(text = gsub("list", "plot_axis", as.expression(substitute(list(x = current.chob(),
                side=side, at=get("at"), labels=get("labels"), tick=tick,
                font=font,pos=pos, col=col)))), srcfile = NULL)
-  plot_object <- quantmod:::current.chob()
+  plot_object <- current.chob()
   lenv$xdata <- plot_object$Env$xdata
   plot_object$set_frame(2)
   plot_object$add(exp, env=c(lenv,plot_object$Env), expr=TRUE)
@@ -93,7 +93,7 @@ function(main=NULL, sub=NULL, xlab=NULL, ylab=NULL, line=NA, ...) {
       labels <- pretty(xdata[xsubset])
       dropped_label <- which(labels < min(xdata[xsubset],na.rm=TRUE))
       labels <- labels[-dropped_label]
-    } 
+    }
     if(is.null(at))
       at <- labels
     if(side==2) {
@@ -110,9 +110,9 @@ function(main=NULL, sub=NULL, xlab=NULL, ylab=NULL, line=NA, ...) {
       assign(name, value, envir = lenv)
   }, names(list(main=main,sub=sub,xlab=xlab,ylab=ylab,line=line)),
      list(main=main,sub=sub,xlab=xlab,ylab=ylab,line=line))
-  exp <- parse(text = gsub("list", "plot_title", as.expression(substitute(list(x = current.chob(), 
+  exp <- parse(text = gsub("list", "plot_title", as.expression(substitute(list(x = current.chob(),
                side=side, at=get("at"), labels=get("labels"), font=font,pos=pos, col=col)))), srcfile = NULL)
-  plot_object <- quantmod:::current.chob()
+  plot_object <- current.chob()
   lenv$xdata <- plot_object$Env$xdata
   plot_object$set_frame(2)
   plot_object$add(exp, env=c(lenv,plot_object$Env), expr=TRUE)
