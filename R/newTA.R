@@ -91,12 +91,14 @@
   }
 
   # fdots: should the underlying function call use ...
-  .body[5] <- paste("x <-",funToFun(FUN,FUN.name,data.at, dots=fdots))
+  .body[5] <- paste("x <-", funToFun(FUN, FUN.name, data.at, dots=fdots))
   if(.body[6] == 'postFUN <- ""') .body[6] <- ''
   if(.body[4] == 'preFUN <- ""' ) .body[4] <- ''
-  as.function(c(.formals,as.call(parse(text=.body))[[1]]),.GlobalEnv)
+  as.function(c(.formals, as.call(parse(text = .body))[[1]]),
+              envir = asNamespace('quantmod'))
 }
 
+## Do not edit!  Some line numbers are referred to in newTA.
 `skeleton.TA` <- function(on)
 {
     lchob <- get.current.chob()
@@ -120,6 +122,7 @@
     chobTA@call <- match.call()
     legend.name <- gsub('^add','',deparse(match.call()))
     gpars <- list()
+    ## safe to edit from here down
     chobTA@params <- list(xrange = lchob@xrange, yrange=yrange, colors = lchob@colors,
         color.vol = lchob@color.vol, multi.col = lchob@multi.col,
         spacing = lchob@spacing, width = lchob@width, bp = lchob@bp,

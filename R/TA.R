@@ -273,16 +273,10 @@ function(x) {
 # setTA {{{
 `setTA` <-
 function(type=c('chartSeries','barChart','candleChart')) {
-  if('chartSeries' %in% type) Defaults::setDefaults(chartSeries,TA=listTA())
-  if('barChart' %in% type) Defaults::setDefaults(barChart,TA=listTA())
-  if('candleChart' %in% type) Defaults::setDefaults(candleChart,TA=listTA())
 }# }}}
 # unsetTA {{{
 `unsetTA` <-
 function(type=c('chartSeries','barChart','candleChart')) {
-  if('chartSeries' %in% type) Defaults::setDefaults(chartSeries,TA=NULL)
-  if('barChart' %in% type) Defaults::setDefaults(barChart,TA=NULL)
-  if('candleChart' %in% type) Defaults::setDefaults(candleChart,TA=NULL)
 }# }}}
 # listTA {{{
 `listTA` <-

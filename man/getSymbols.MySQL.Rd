@@ -74,10 +74,7 @@ with class defined by \code{return.class}.
 \note{ 
 The default configuration needs a table named
 for the Symbol specified (e.g. MSFT), with
-column names date,o,h,l,c,v,a. For table
-layout changes it is best to use
-\code{setDefaults(getSymbols.MySQL,...)} with
-the new db.fields values specified.
+column names date,o,h,l,c,v,a. 
 }
 \seealso{ \code{\link{getSymbols}},
           \code{\link{setSymbolLookup}} }
@@ -87,16 +84,11 @@ the new db.fields values specified.
 # MSFT to the global environment
 # The last example is what NOT to do!
 
-setDefaults(getSymbols.MySQL,user='jdoe',password='secret',
-            dbname='tradedata')
-
 ## Method #1
 getSymbols('MSFT',src='MySQL')
 
 
 ## Method #2
-setDefaults(getSymbols,src='MySQL')
-  # OR
 setSymbolLookup(MSFT='MySQL')
 
 getSymbols('MSFT')
