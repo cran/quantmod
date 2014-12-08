@@ -2,6 +2,7 @@
 # addCMO {{{
 `addCMO` <- function(n=14) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -16,7 +17,7 @@
   } else if(is.null(dim(x))) {
     x
   } else {
-    x[,1]
+    x[,1] 
   }
 
   cmo <- CMO(xx,n=n)
@@ -42,7 +43,7 @@
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartCMO {{{
 `chartCMO` <-
@@ -59,7 +60,7 @@ function(x) {
     n <- x@params$n
     cmo <- x@TA.values
 
-    y.range <- seq(-max(abs(cmo), na.rm = TRUE), max(abs(cmo),
+    y.range <- seq(-max(abs(cmo), na.rm = TRUE), max(abs(cmo), 
                    na.rm = TRUE), length.out = length(x.range)) * 1.05
 
     plot(x.range,y.range,
@@ -74,11 +75,11 @@ function(x) {
     lines(seq(1,length(x.range),by=spacing),cmo,col=COLOR,lwd=1,type='l')
 
     text(0, last(y.range)*.9,
-         paste("Chande Momentum Oscillator (", x@params$n,"):", sep = ""),
+         paste("Chande Momentum Oscillator (", x@params$n,"):", sep = ""), 
         pos = 4)
 
     text(0, last(y.range)*.9,
-        paste("\n\n\n",sprintf("%.3f",last(cmo)), sep = ""), col = COLOR,
+        paste("\n\n\n",sprintf("%.3f",last(cmo)), sep = ""), col = COLOR, 
         pos = 4)
 
     axis(2)

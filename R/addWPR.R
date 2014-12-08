@@ -2,6 +2,7 @@
 # addWPR {{{
 `addWPR` <- function(n=14) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -14,7 +15,7 @@
   } else if(is.null(dim(x))) {
     x
   } else {
-    x[,1]
+    x[,1] 
   }
 
 
@@ -41,7 +42,7 @@
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartWPR {{{
 `chartWPR` <-
@@ -58,7 +59,7 @@ function(x) {
     n <- x@params$n
     wpr <- x@TA.values
 
-    y.range <- seq(-0.1, max(abs(wpr),
+    y.range <- seq(-0.1, max(abs(wpr), 
                    na.rm = TRUE), length.out = length(x.range)) * 1.05
 
     # create appropriately scaled empty plot area
@@ -73,11 +74,11 @@ function(x) {
     lines(seq(1,length(x.range),by=spacing),wpr,col=COLOR,lwd=1,type='l')
 
     text(0, last(y.range)*.9,
-         paste("Williams %R (", x@params$n,"):", sep = ""),
+         paste("Williams %R (", x@params$n,"):", sep = ""), 
         pos = 4)
 
     text(0, last(y.range)*.9,
-        paste("\n\n\n",sprintf("%.3f",last(wpr)), sep = ""), col = COLOR,
+        paste("\n\n\n",sprintf("%.3f",last(wpr)), sep = ""), col = COLOR, 
         pos = 4)
 
     axis(2)

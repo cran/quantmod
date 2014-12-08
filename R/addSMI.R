@@ -2,8 +2,9 @@
 # addSMI {{{
 `addSMI` <- function(n=13,slow=25,fast=2,signal=9,ma.type='EMA') {
 
-  lchob <- get.current.chob()
 
+  lchob <- get.current.chob()
+  
   x <- as.matrix(lchob@xdata)
 
   chobTA <- new("chobTA")
@@ -14,7 +15,7 @@
   } else if(is.null(dim(x))) {
     x
   } else {
-    x[,1]
+    x[,1] 
   }
 
   smi <- SMI(xx, n=n, nFast=fast,
@@ -45,7 +46,7 @@
   #  invisible(chobTA)
   #} else {
   return(chobTA)
-  #}
+  #} 
 } #}}}
 # chartSMI {{{
 `chartSMI` <-
@@ -61,16 +62,16 @@ function(x) {
 
     smi <- x@TA.values
 
-    y.range <- seq(-max(abs(smi[,1]), na.rm = TRUE), max(abs(smi[,1]),
+    y.range <- seq(-max(abs(smi[,1]), na.rm = TRUE), max(abs(smi[,1]), 
                    na.rm = TRUE), length.out = length(x.range)) * 1.05
 
     if(x@new) {
       plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
-
+  
       coords <- par('usr')
       rect(coords[1],coords[3],coords[2],coords[4],col=x@params$colors$area)
       grid(NA,NULL,col=x@params$colors$grid.col)
-    }
+    } 
     COLOR <- "#0033CC"
     SIGNAL <- "#BFCFFF"
 
@@ -82,16 +83,16 @@ function(x) {
     text(0, last(y.range) * .9,
          paste("Stochastic Momentum Index (",
          paste(x@params$n,x@params$fast,x@params$slow,x@params$signal,sep=','),
-         "):", sep = ""),
+         "):", sep = ""), 
          pos = 4)
 
     text(0, last(y.range)*.9,
-        paste("\n\n\nSMI: ",sprintf("%.3f",last(smi[,1])), sep = ""), col = COLOR,
+        paste("\n\n\nSMI: ",sprintf("%.3f",last(smi[,1])), sep = ""), col = COLOR, 
         pos = 4)
 
     text(0, last(y.range)*.9,
         paste("\n\n\n\n\nSignal: ",
-              sprintf("%.3f",last(smi[,2])), sep = ""), col = SIGNAL,
+              sprintf("%.3f",last(smi[,2])), sep = ""), col = SIGNAL, 
         pos = 4)
 
     axis(2)

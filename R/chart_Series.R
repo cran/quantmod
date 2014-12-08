@@ -29,7 +29,7 @@ function(x,
                     50,20,10,
                     5,2,1,
                     0.50,0.25,0.20,0.10,
-                    0.05,0.02,0.01),
+                    0.05,0.02,0.01), 
          lt=20,gt=3, secondary=FALSE) {
   x <- na.omit(x)
   diff_range <- diff(range(x))
@@ -47,7 +47,7 @@ function(x,
 #axTicksByValue <- function(x, ...) pretty(x)
 
 # UNUSED heikin.ashi.bars {{{
-heikin.ashi.bars <-
+heikin.ashi.bars <- 
 function(x, type="", spacing=1, up.col="green",dn.col="red",up.border="grey",dn.border=up.border) {
   if(is.OHLC(x)) {
     haCloses <- as.xts(apply(OHLC(x),1,sum))/4
@@ -60,16 +60,16 @@ function(x, type="", spacing=1, up.col="green",dn.col="red",up.border="grey",dn.
   }
   bar.col <- ifelse(haOpens < haCloses, up.col, dn.col)
   bar.border <- ifelse(haOpens < haCloses, up.border, dn.border)
-
+  
   x.pos <- spacing*(1:NROW(x))
   segments(x.pos, haLows, x.pos, apply(cbind(haOpens,haCloses),1,min),col=bar.border)
   segments(x.pos, haHighs, x.pos, apply(cbind(haOpens,haCloses),1,max),col=bar.border)
 
   if (type == "candlesticks") {
-     rect(x.pos - spacing/3, haOpens, x.pos + spacing/3,
+     rect(x.pos - spacing/3, haOpens, x.pos + spacing/3, 
           haCloses, col = bar.col, border = bar.border)
   } else segments(x.pos, haOpens, x.pos, haCloses, col='blue')
-
+  
 } # }}}
 
 # range.bars {{{
@@ -99,7 +99,7 @@ function(x, type="", spacing=1, line.col="darkorange",
   }
   bar.col <- ifelse(Opens < Closes, up.col, dn.col)
   bar.border <- ifelse(Opens < Closes, up.border, dn.border)
-
+  
   x.pos <- spacing*(1:NROW(x))
   if( type %in% c("ohlc", "hlc")) {
     bar.border <- bar.col
@@ -110,21 +110,21 @@ function(x, type="", spacing=1, line.col="darkorange",
   segments(x.pos, Highs, x.pos, apply(cbind(Opens,Closes),1,max),col=bar.border,lwd=1.2,lend=3)
 
   if (type == "candlesticks") {
-     rect(x.pos - spacing/3, Opens, x.pos + spacing/3,
+     rect(x.pos - spacing/3, Opens, x.pos + spacing/3, 
           Closes, col = bar.col, border = bar.border, lwd=0.2)
-  } else
+  } else 
   if (type == "matchsticks") {
     bar.col[is.na(bar.col)] <- up.col
     segments(x.pos, Opens, x.pos, Closes, col=bar.col,lwd=1.2,lend=3)
   } else
   if (type == "ohlc") {
     segments(x.pos, Opens, x.pos, Closes, col=bar.border,lwd=1.2,lend=3)
-    segments(x.pos-1/3, Opens, x.pos, Opens, col=bar.border,lwd=1.2,lend=3)
-    segments(x.pos, Closes, x.pos+1/3, Closes, col=bar.border,lwd=1.2,lend=3)
+    segments(x.pos-1/3, Opens, x.pos, Opens, col=bar.border,lwd=1.2,lend=3) 
+    segments(x.pos, Closes, x.pos+1/3, Closes, col=bar.border,lwd=1.2,lend=3) 
   } else
   if (type == "hlc") {
     segments(x.pos, Opens, x.pos, Closes, col=bar.border,lwd=1.2,lend=3)
-    segments(x.pos, Closes, x.pos+1/3, Closes, col=bar.border,lwd=1.2,lend=3)
+    segments(x.pos, Closes, x.pos+1/3, Closes, col=bar.border,lwd=1.2,lend=3) 
   }
 } # }}}
 
@@ -138,8 +138,8 @@ chart_theme <- chart_theme_white <- function() {
                         labels="#333333",
                         line.col="darkorange",
                         dn.col="red",
-                        up.col=NA,
-                        dn.border="#333333",
+                        up.col=NA, 
+                        dn.border="#333333", 
                         up.border="#333333"),
                shading=1,
                format.labels=TRUE,
@@ -165,7 +165,7 @@ chart_pars <- function() {
 #
 #  chart_Series now uses a new graphical extension
 #  called 'replot'.  This enables the accumulation
-#  of 'actions', in the form of (unevaluated) R
+#  of 'actions', in the form of (unevaluated) R 
 #  expressions, to be stored within a replot object.
 #  This object is an R closure, which contains
 #  all the methods which are needed to perform
@@ -174,10 +174,10 @@ chart_pars <- function() {
 #  Ideally all behavior is consistent with the
 #  original quantmod:::chartSeries, except the
 #  undesireable ones.
-chart_Series <- function(x,
-                         name=deparse(substitute(x)),
-                         type="candlesticks",
-                         subset="",
+chart_Series <- function(x, 
+                         name=deparse(substitute(x)), 
+                         type="candlesticks", 
+                         subset="", 
                          TA="",
                          pars=chart_pars(), theme=chart_theme(),
                          clev=0,
@@ -199,7 +199,7 @@ chart_Series <- function(x,
     grid.ticks.on <- names(major.grid)[rev(which(major.grid < 30))[1]]
   } else grid.ticks.on <- theme$grid.ticks.on
   label.bg <- theme$col$label.bg
-
+  
   cs$subset <- function(x) {
     if(FALSE) {set_ylim <- get_ylim <- set_xlim <- Env<-function(){} }  # appease R parser?
     if(missing(x)) {
@@ -267,7 +267,7 @@ chart_Series <- function(x,
 
   # axis_ticks function to label lower frequency ranges/grid lines
   cs$Env$axis_ticks <- function(xdata,xsubset) {
-    ticks <- diff(axTicksByTime2(xdata[xsubset],labels=FALSE))/2 +
+    ticks <- diff(axTicksByTime2(xdata[xsubset],labels=FALSE))/2 + 
                   last(axTicksByTime2(xdata[xsubset],labels=TRUE),-1)
     if(!theme$coarse.time || length(ticks) == 1)
       return(unname(ticks))
@@ -297,7 +297,7 @@ chart_Series <- function(x,
   cs$set_frame(1)
 
   # add observation level ticks on x-axis if < 400 obs.
-  cs$add(expression(if(NROW(xdata[xsubset])<400)
+  cs$add(expression(if(NROW(xdata[xsubset])<400) 
           {axis(1,at=1:NROW(xdata[xsubset]),labels=FALSE,col=theme$grid2,tcl=0.3)}),expr=TRUE)
 
   # add "month" or "month.abb"
@@ -344,14 +344,14 @@ chart_Series <- function(x,
   # left axis labels
   if(theme$lylab) {
     cs$add(expression(text(1-1/3-max(strwidth(alabels)),
-                alabels, #axis_labels(xdata,xsubset),
-                noquote(format(alabels,justify="right")),
+                alabels, #axis_labels(xdata,xsubset), 
+                noquote(format(alabels,justify="right")), 
                 col=theme$labels,offset=0,cex=0.9,pos=4,xpd=TRUE)),expr=TRUE)
   }
   # right axis labels
   if(theme$rylab) {
     cs$add(expression(text(NROW(xdata[xsubset])+1/3,
-                alabels,
+                alabels, 
                 noquote(format(alabels,justify="right")),
                 col=theme$labels,offset=0,cex=0.9,pos=4,xpd=TRUE)),expr=TRUE)
   }
@@ -360,7 +360,7 @@ chart_Series <- function(x,
   # need to rename range.bars to something more generic, and allow type= to handle:
   #  ohlc, hlc, candles, ha-candles, line, area
   #  chart_Perf will be the call to handle relative performace plots
-  cs$add(expression(range.bars(xdata[xsubset],
+  cs$add(expression(range.bars(xdata[xsubset], 
                     type, 1,
                     fade(theme$line.col,clev),
                     fade(theme$up.col,clev),
@@ -393,7 +393,7 @@ zoom_Chart <- function(subset) {
 # }}}
 
 fade <- function(col, level) {
-  # adjust col toward white, (?background) by 0-1 range
+  # adjust col toward white, (?background) by 0-1 range 
   cols <- character(length(col))
   for(i in 1:length(col))
   cols[i] <- colorRampPalette(c(col[i], "white"))(99)[level*100]
@@ -403,20 +403,20 @@ fade <- function(col, level) {
 current.chob <- function() invisible(get(".chob",.plotEnv))
 
 use.chob <- function(use=TRUE) {
-  options('global.chob'=use)
+  options('global.chob'=use) 
 }
 
 new_ta <- function(FUN, preFUN, postFUN, on=NA, ...) {}
 
 # add_Series {{{
-add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", theme=NULL,...) {
+add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", theme=NULL,...) { 
   lenv <- new.env()
   lenv$name <- deparse(substitute(x))
   lenv$plot_series <- function(x, series, type, ...) {
     # vertical grid lines
     if(FALSE) theme <- NULL
     segments(axTicksByTime2(xdata[xsubset]),
-             par("usr")[3], #min(-10,range(na.omit(macd))[1]),
+             par("usr")[3], #min(-10,range(na.omit(macd))[1]), 
              axTicksByTime2(xdata[xsubset]),
              par("usr")[4], #max(10,range(na.omit(macd))[2]), col=x$Env$theme$grid)
              col=theme$grid)
@@ -426,7 +426,7 @@ add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", 
   }
   lenv$xdata <- x
   # map all passed args (if any) to 'lenv' environment
-  mapply(function(name,value) { assign(name,value,envir=lenv) },
+  mapply(function(name,value) { assign(name,value,envir=lenv) }, 
         names(list(x=x,type=type,order=order,on=on,legend=legend,...)),
               list(x=x,type=type,order=order,on=on,legend=legend,...))
   exp <- parse(text=gsub("list","plot_series",
@@ -455,11 +455,11 @@ add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", 
     plot_object$add(expression(segments(1,alabels,NROW(xdata[xsubset]),alabels, col=theme$grid)),expr=TRUE)
   # left axis labels
     exp <- c(expression(text(1-1/3-max(strwidth(alabels)),
-                alabels, #axis_labels(xdata,xsubset),
-                noquote(format(alabels,justify="right")),
+                alabels, #axis_labels(xdata,xsubset), 
+                noquote(format(alabels,justify="right")), 
                 col=theme$labels,offset=0,cex=0.9,pos=4)),
              expression(text(NROW(upper.env$xdata[xsubset])+1/3,
-                alabels,
+                alabels, 
                 noquote(format(alabels,justify="right")),
                 col=theme$labels,offset=0,cex=0.9,pos=4)),exp)
 #    lenv$grid_lines <- function(xdata,x) { seq(-1,1) }
@@ -481,7 +481,7 @@ add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", 
 # add_TA {{{
 add_TA <- function(x, order=NULL, on=NA, legend="auto",
                    yaxis=list(NULL,NULL),
-                   col=1, taType=NULL, ...) {
+                   col=1, taType=NULL, ...) { 
   lenv <- new.env()
   lenv$name <- deparse(substitute(x))
   lenv$plot_ta <- function(x, ta, on, taType, col=col,...) {
@@ -498,7 +498,7 @@ add_TA <- function(x, order=NULL, on=NA, legend="auto",
       ta <- merge(ta, xdata, join="right",retside=c(TRUE,FALSE))[xsubset]
       shade <- shading(as.logical(ta,drop=FALSE))
       if(length(shade$start) > 0) # all FALSE cause zero-length results
-        rect(shade$start-1/3, par("usr")[3] ,shade$end+1/3, par("usr")[4], col=col,...)
+        rect(shade$start-1/3, par("usr")[3] ,shade$end+1/3, par("usr")[4], col=col,...) 
     } else {
       # we can add points that are not necessarily at the points
       # on the main series
@@ -514,7 +514,7 @@ add_TA <- function(x, order=NULL, on=NA, legend="auto",
   }
   lenv$xdata <- x
   # map all passed args (if any) to 'lenv' environment
-  mapply(function(name,value) { assign(name,value,envir=lenv) },
+  mapply(function(name,value) { assign(name,value,envir=lenv) }, 
         names(list(x=x,order=order,on=on,legend=legend,
                    taType=taType,col=col,...)),
               list(x=x,order=order,on=on,legend=legend,
@@ -551,7 +551,7 @@ add_TA <- function(x, order=NULL, on=NA, legend="auto",
     plot_object$add_frame(ylim=range(na.omit(xdata)),asp=1)  # need to have a value set for ylim
     plot_object$next_frame()
   # add grid lines, using custom function for MACD gridlines
-  lenv$grid_lines <- function(xdata,xsubset) {
+  lenv$grid_lines <- function(xdata,xsubset) { 
     pretty(xdata[xsubset])
   }
   exp <- c(expression(segments(1,grid_lines(xdata,xsubset),NROW(xdata[xsubset]),grid_lines(xdata,xsubset),
@@ -564,10 +564,10 @@ add_TA <- function(x, order=NULL, on=NA, legend="auto",
                       noquote(format(grid_lines(xdata,xsubset),justify="right")),
                       col=theme$labels,offset=0,pos=4,cex=0.9)))
   plot_object$add(exp,env=c(lenv, plot_object$Env),expr=TRUE,no.update=no.update)
-  } else {
+  } else { 
     for(i in 1:length(on)) {
       plot_object$set_frame(2*on[i]) # this is defaulting to using headers, should it be optionable?
-      lenv$grid_lines <- function(xdata,xsubset) {
+      lenv$grid_lines <- function(xdata,xsubset) { 
         pretty(xdata[xsubset])
       }
       exp <- c(exp,
@@ -716,7 +716,7 @@ add_EVWMA <- function(n=10, on=1, col='darkgrey', ...) {
 } # }}}
 # add_GMMA {{{
 add_GMMA <- function(short=c(3,5,8,10,12,15),long=c(30,35,40,45,50,60), on=1, col=c('yellow','brown'),...) {
-#x, short = c(3, 5, 8, 10, 12, 15), long = c(30, 35,
+#x, short = c(3, 5, 8, 10, 12, 15), long = c(30, 35, 
 #    40, 45, 50, 60), maType
   lenv <- new.env()
   lenv$add_gmma <- function(x, short, long, col,...) {
@@ -747,13 +747,13 @@ add_SMI <- function (n=13, nFast=25, nSlow=2, nSig=9, maType="EMA", bounded=TRUE
                maType=maType,bounded=bounded)
     x.pos <- 1:NROW(xdata[xsubset])
     segments(axTicksByTime2(xdata[xsubset]),
-             range(na.omit(smi))[1],
+             range(na.omit(smi))[1], 
              axTicksByTime2(xdata[xsubset]),
              range(na.omit(smi))[2], col=x$Env$theme$grid)
-    lines(x.pos, smi[xsubset,1], col=x$Env$theme$smi$col$smi, lwd=2,...)
-    lines(x.pos, smi[xsubset,2], col=x$Env$theme$smi$col$signal,  ...)
+    lines(x.pos, smi[xsubset,1], col=x$Env$theme$smi$col$smi, lwd=2,...) 
+    lines(x.pos, smi[xsubset,2], col=x$Env$theme$smi$col$signal,  ...) 
   }
-  mapply(function(name,value) { assign(name,value,envir=lenv) },
+  mapply(function(name,value) { assign(name,value,envir=lenv) }, 
         names(list(n=n,nFast=nFast,nSlow=nSlow,nSig=nSig,maType=maType,bounded=bounded,...)),
               list(n=n,nFast=nFast,nSlow=nSlow,nSig=nSig,maType=maType,bounded=bounded,...))
   exp <- parse(text=gsub("list","plot_smi",
@@ -822,15 +822,15 @@ add_RSI <- function (n=14, maType="EMA", wilder=TRUE, ..., RSIup=70, RSIdn=30) {
     theme <- x$Env$theme$rsi
     # vertical grid lines
     segments(axTicksByTime2(xdata[xsubset]),
-             par("usr")[3], #min(-10,range(na.omit(macd))[1]),
+             par("usr")[3], #min(-10,range(na.omit(macd))[1]), 
              axTicksByTime2(xdata[xsubset]),
              par("usr")[4], #max(10,range(na.omit(macd))[2]), col=x$Env$theme$grid)
              col=x$Env$theme$grid)
-    lines(x.pos, rep(RSIdn,length(x.pos)), col=theme$col$lines, lwd=1,lty=2,lend=2,...)
-    lines(x.pos, rep(RSIup,length(x.pos)), col=theme$col$lines, lwd=1,lty=2,lend=2,...)
-    lines(x.pos, rsi[,1], col=x$Env$theme$rsi$col$rsi, lwd=1.5,...)
+    lines(x.pos, rep(RSIdn,length(x.pos)), col=theme$col$lines, lwd=1,lty=2,lend=2,...) 
+    lines(x.pos, rep(RSIup,length(x.pos)), col=theme$col$lines, lwd=1,lty=2,lend=2,...) 
+    lines(x.pos, rsi[,1], col=x$Env$theme$rsi$col$rsi, lwd=1.5,...) 
   }
-  mapply(function(name,value) { assign(name,value,envir=lenv) },
+  mapply(function(name,value) { assign(name,value,envir=lenv) }, 
         names(list(n=n,maType=maType,wilder=wilder,...)),
               list(n=n,maType=maType,wilder=wilder,...))
   exp <- parse(text=gsub("list","plot_rsi",
@@ -902,7 +902,7 @@ skeleton_TA <- function(on, arg, ...) {
 # add_MACD {{{
 add_MACD <- function(fast=12,slow=26,signal=9,maType="EMA",histogram=TRUE,...) {
   lenv <- new.env() # local environment for add_MACD call
-
+  
   # plot_macd draws the indicator using the data from the first(only) call to
   # add_MACD.  This is a bit analogous to chartMACD in the first quantmod versions
   lenv$plot_macd <- function(x, fast, slow, signal, maType, histogram,...) {
@@ -911,7 +911,7 @@ add_MACD <- function(fast=12,slow=26,signal=9,maType="EMA",histogram=TRUE,...) {
     macd <- macd[xsubset]
     # vertical grid lines
     segments(axTicksByTime2(xdata[xsubset]),
-             par("usr")[3], #min(-10,range(na.omit(macd))[1]),
+             par("usr")[3], #min(-10,range(na.omit(macd))[1]), 
              axTicksByTime2(xdata[xsubset]),
              par("usr")[4], #max(10,range(na.omit(macd))[2]), col=x$Env$theme$grid)
              col=x$Env$theme$grid)
@@ -923,13 +923,13 @@ add_MACD <- function(fast=12,slow=26,signal=9,maType="EMA",histogram=TRUE,...) {
       rect(x.pos-1/3, 0, x.pos+1/3, macd.hist, col=bar.col, border="grey", lwd=0.2, ...)  # base graphics call
     }
     # macd line
-    lines(x.pos, macd[,1], col=x$Env$theme$macd$macd, lwd=2,,lty=1,...)
+    lines(x.pos, macd[,1], col=x$Env$theme$macd$macd, lwd=2,,lty=1,...) 
     # signal line
-    lines(x.pos, macd[,2], col=x$Env$theme$macd$signal, lty=3,...)
+    lines(x.pos, macd[,2], col=x$Env$theme$macd$signal, lty=3,...) 
   }
 
   # map all passed args (if any) to 'lenv' environment
-  mapply(function(name,value) { assign(name,value,envir=lenv) },
+  mapply(function(name,value) { assign(name,value,envir=lenv) }, 
         names(list(fast=fast,slow=slow,signal=signal,maType=maType,histogram=histogram,...)),
               list(fast=fast,slow=slow,signal=signal,maType=maType,histogram=histogram,...))
 
@@ -961,7 +961,7 @@ add_MACD <- function(fast=12,slow=26,signal=9,maType="EMA",histogram=TRUE,...) {
   macd <- MACD(Cl(xdata),fast,slow,signal,maType)
   lenv$xdata <- structure(cbind(macd,macd[,1]-macd[,2]),.Dimnames=list(NULL,c("macd","signal","histogram")))
   lenv$macd <- cbind(macd,macd[,1]-macd[,2])
-
+  
   # text annotation
   plot_object$add_frame(ylim=c(0,1),asp=0.15)   # add the header frame
   plot_object$next_frame()                      # move to header frame
@@ -979,7 +979,7 @@ add_MACD <- function(fast=12,slow=26,signal=9,maType="EMA",histogram=TRUE,...) {
   plot_object$next_frame()
 
   # add grid lines, using custom function for MACD gridlines
-  lenv$grid_lines <- function(xdata,xsubset) {
+  lenv$grid_lines <- function(xdata,xsubset) { 
     axTicksByValue(xdata[xsubset],c(5,4,3,2,1),gt=3)
   }
   exp <- c(expression(segments(1,grid_lines(xdata,xsubset),length(xsubset),grid_lines(xdata,xsubset),
@@ -1000,7 +1000,7 @@ add_MACD <- function(fast=12,slow=26,signal=9,maType="EMA",histogram=TRUE,...) {
 } # }}}
 
 # add_BBands {{{
-add_BBands <- function(n=20, maType="SMA", sd=2, on=-1, ...) {
+add_BBands <- function(n=20, maType="SMA", sd=2, on=-1, ...) { 
   lenv <- new.env()
   lenv$plot_bbands <- function(x, n, maType, sd, on, ...) {
     xdata <- x$Env$xdata
@@ -1055,11 +1055,11 @@ add_Vo <- function(...) {
     #cur_ylim <- x$get_ylim()
     #cur_ylim[[x$get_frame()]] <- range(vo)
     #x$set_ylim(cur_ylim)
-
+    
     x.pos <- 1:NROW(vo)
     min.vol <- min(vo)
     segments(axTicksByTime(xdata[xsubset],ticks.on=x$Env$ticks.on),
-             range(na.omit(vo))[1],
+             range(na.omit(vo))[1], 
              axTicksByTime(xdata[xsubset],ticks.on=x$Env$ticks.on),
              range(na.omit(vo))[2], col=x$Env$theme$grid)
     rect(x.pos-1/3, min.vol, x.pos+1/3, vo, col=bar.col, border=bar.border,...)  # base graphics call
@@ -1074,7 +1074,7 @@ add_Vo <- function(...) {
   xsubset <- plot_object$Env$xsubset
   theme <- plot_object$theme
   vo <- xdata[xsubset]
-  lenv$xdata <- xdata # xdata in lenv is
+  lenv$xdata <- xdata # xdata in lenv is 
     plot_object$add_frame(ylim=c(0,1),asp=0.15)
     plot_object$next_frame()
     text.exp <- expression(text(c(0,

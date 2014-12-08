@@ -1,6 +1,6 @@
 #
 #  At present all TA functionality is in this file
-#
+#  
 #  TA implemented and charting optimized:
 #
 #    BBands,CCI,CMF,CMO,DPO,EMA,Envelope,MACD,Momentum,
@@ -13,9 +13,10 @@
 #  TA not yet implemented (and some may not be)
 #
 #    CLV,CMD,OBV,KST,TDI,WHF,Aroon,ChAD,ChVol,WilliamsAD,
-#    Points, Stoch, SD, ...???
+#    Points, Stoch, SD, ...??? 
 # addMomentum {{{
 `addMomentum` <- function(n=1) {
+
 
   lchob <- get.current.chob()
 
@@ -28,7 +29,7 @@
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   mom <- momentum(xx,n=n)
 
@@ -53,7 +54,7 @@
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartMomentum {{{
 `chartMomentum` <-
@@ -84,7 +85,7 @@ function(x) {
 
     lines(seq(1,length(x.range),by=spacing),mom,col=COLOR,lwd=2,type='l')
 
-    text(0, last(y.range)*.9,
+    text(0, last(y.range)*.9, 
          paste("Momentum (", x@params$n, "):"),pos=4)
 
     text(0, last(y.range)*.9,
@@ -98,6 +99,7 @@ function(x) {
 # addCCI {{{
 `addCCI` <- function(n=20, maType="SMA", c=0.015) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -107,7 +109,7 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     cbind(Hi(x),Lo(x),Cl(x))
-  } else x
+  } else x 
 
   cci <- CCI(xx,n=n,maType=maType,c=c)
 
@@ -132,7 +134,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartCCI {{{
 `chartCCI` <-
@@ -160,14 +162,14 @@ function(x) {
 
     usr <- par('usr')
 
-    # draw shading in -100:100 y-range
+    # draw shading in -100:100 y-range 
     rect(usr[1],-100,usr[2],100,col=x@params$colors$BBands$fill)
 
     # fill upper and lower areas
     xx <- seq(1,length(x.range),by=spacing)
     cci.above <- ifelse(cci >=  100,cci, 100)
     cci.below <- ifelse(cci <= -100,cci,-100)
-
+    
     polygon(c(xx,rev(xx)),c(cci.above,rep(100,length(xx))),col="red")
     polygon(c(xx,rev(xx)),c(cci.below,rep(-100,length(xx))),col="red")
 
@@ -182,7 +184,7 @@ function(x) {
          paste("Commodity Channel Index (", x@params$n, ",",
          x@params$c,"):",sep=''),pos=4)
     text(0, last(y.range)*.9,
-         paste("\n\n\n",sprintf("%.2f",last(cci)),sep=''), col = 'red',
+         paste("\n\n\n",sprintf("%.2f",last(cci)),sep=''), col = 'red', 
          pos = 4)
 
     axis(2)
@@ -191,6 +193,7 @@ function(x) {
 
 # addADX {{{
 `addADX` <- function(n=14, maType="EMA", wilder=TRUE) {
+
 
   lchob <- get.current.chob()
 
@@ -224,7 +227,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartADX {{{
 `chartADX` <-
@@ -264,6 +267,7 @@ function(x) {
 # addATR {{{
 `addATR` <- function(n=14, maType="EMA", ...) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -296,7 +300,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartATR {{{
 `chartATR` <-
@@ -339,7 +343,7 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   trix <- TRIX(xx,n=n,nSig=signal,maType=maType,percent=percent)
 
@@ -365,7 +369,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartTRIX {{{
 `chartTRIX` <-
@@ -410,12 +414,12 @@ function(x) {
 
   chobTA <- new("chobTA")
   chobTA@new <- TRUE
-
+ 
   # should really allow for _any_ series to be used, like MA (FIXME)
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   dpo <- DPO(xx,n=n,maType=maType,shift=shift,percent=percent)
 
@@ -441,7 +445,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartDPO {{{
 `chartDPO` <-
@@ -458,7 +462,7 @@ function(x) {
     n <- x@params$n
     dpo <- x@TA.values
 
-    y.range <- seq(-max(abs(dpo), na.rm = TRUE), max(abs(dpo),
+    y.range <- seq(-max(abs(dpo), na.rm = TRUE), max(abs(dpo), 
                    na.rm = TRUE), length.out = length(x.range)) * 1.05
 
     if(x@new) {
@@ -481,18 +485,18 @@ function(x) {
     abline(h=0,col="#999999")
 
     text(0, last(y.range)*.9,
-         paste("De-trended Price Oscillator (", x@params$n,"):", sep = ""),
+         paste("De-trended Price Oscillator (", x@params$n,"):", sep = ""), 
         pos = 4)
 
     text(0, last(y.range)*.9,
-        paste("\n\n\n",sprintf("%.3f",last(na.omit(dpo))), sep = ""),
-        col = ifelse(last(dpo) > 0,x@params$colors$up.col,x@params$colors$dn.col),
+        paste("\n\n\n",sprintf("%.3f",last(na.omit(dpo))), sep = ""), 
+        col = ifelse(last(dpo) > 0,x@params$colors$up.col,x@params$colors$dn.col), 
         pos = 4)
 
     axis(2)
     box(col=x@params$colors$fg.col)
 
-#    y.range <- seq(-max(abs(dpo), na.rm = TRUE), max(abs(dpo),
+#    y.range <- seq(-max(abs(dpo), na.rm = TRUE), max(abs(dpo), 
 #        na.rm = TRUE), length.out = length(x.range)) * 1.05
 #    plot(x.range, y.range, type = "n", axes = FALSE, ann = FALSE)
 #
@@ -509,6 +513,7 @@ function(x) {
 # addRSI {{{
 `addRSI` <- function(n=14,maType='EMA',wilder=TRUE) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -519,7 +524,7 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   rsi <- RSI(xx,n=n,maType=maType,wilder=wilder)
   chobTA@TA.values <- rsi[lchob@xsubset]
@@ -543,7 +548,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartRSI {{{
 `chartRSI` <-
@@ -565,7 +570,7 @@ function(x) {
 
     if(x@new) {
       plot(x.range,y.range,type='n',axes=FALSE,ann=FALSE)
-
+  
       coords <- par('usr')
       rect(coords[1],coords[3],coords[2],coords[4],col=x@params$colors$area)
       grid(NA,NULL,col=x@params$colors$grid.col)
@@ -574,11 +579,11 @@ function(x) {
     lines(seq(1,length(x.range),by=spacing),rsi,col='#BFCFFF',lwd=1,lty='dotted',type='l')
 
     text(0, last(y.range)*.9,
-         paste("Relative Strength Index (", x@params$n,"):", sep = ""),
+         paste("Relative Strength Index (", x@params$n,"):", sep = ""), 
          pos = 4)
 
     text(0, last(y.range)*.9,
-         paste("\n\n\n",sprintf("%.3f",last(rsi)), sep = ""), col = '#0033CC',
+         paste("\n\n\n",sprintf("%.3f",last(rsi)), sep = ""), col = '#0033CC', 
          pos = 4)
 
     axis(2)
@@ -587,6 +592,7 @@ function(x) {
 
 # addROC {{{
 `addROC` <- function(n=1,type=c('discrete','continuous'),col='red') {
+
 
   lchob <- get.current.chob()
 
@@ -597,7 +603,7 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   type <- match.arg(type)
 
@@ -623,7 +629,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartROC {{{
 `chartROC` <-
@@ -653,6 +659,7 @@ function(x) {
 # addBBands {{{
 `addBBands` <- function(n=20,sd=2,maType='SMA',draw='bands',on=-1) {
 
+
   draw.options <- c('bands','percent','width')
   draw <- draw.options[pmatch(draw,draw.options)]
 
@@ -671,10 +678,10 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     cbind(Hi(x),Lo(x),Cl(x))
-  } else x
+  } else x 
 
   bb <- BBands(xx,n=n,maType=maType,sd=sd)
-
+  
   chobTA@TA.values <- bb[lchob@xsubset,]
   chobTA@name <- "chartBBands"
   chobTA@call <- match.call()
@@ -705,17 +712,17 @@ function(x) {
     color.vol <- x@params$color.vol
 
     bband.col <- ifelse(!is.null(x@params$colors$BBands$col),
-                        x@params$colors$BBands$col,'red')
+                        x@params$colors$BBands$col,'red') 
     bband.fill <- ifelse(!is.null(x@params$colors$BBands$fill),
-                        x@params$colors$BBands$fill,x@params$colors$bg.col)
+                        x@params$colors$BBands$fill,x@params$colors$bg.col) 
 
     # bband col vector
     # lower.band, middle.band, upper.band, %b, bb.width
     if(length(bband.col) == 1) # no user specified
       bband.col <- c(bband.col,'grey',rep(bband.col,3))
-
+    
     param <- x@params$param; ma.type <- x@params$ma.type
-
+   
     bb <- x@TA.values
 
     if(x@params$draw == 'bands') {
@@ -738,16 +745,16 @@ function(x) {
         lines(seq(1,length(x.range),by=spacing),
               bb[,2],col=bband.col[2],lwd=1,lty='dotted')
       }
-
+     
       # return the text to be pasted
       legend.text <- list()
       legend.text[[1]] <- list(legend=paste("Bollinger Bands (",
                      paste(x@params$n,x@params$sd,sep=","),") [Upper/Lower]: ",
                      sprintf("%.3f",last(bb[,3])),"/",
-                     sprintf("%.3f",last(bb[,1])), sep = ""),
-                     text.col = bband.col[3])
+                     sprintf("%.3f",last(bb[,1])), sep = ""), 
+                     text.col = bband.col[3]) 
       invisible(legend.text)
-    } else
+    } else 
       if(x@params$draw == 'percent') {
         # draw %B in new frame
         y.range <- seq(min(bb[,4], na.rm = TRUE) * .9,
@@ -758,7 +765,7 @@ function(x) {
 
         lines(seq(1,length(x.range),by=spacing), bb[,4],
               col=bband.col[4],lwd=1)
-
+        
         text(0,last(y.range) * .9, paste("Bollinger %b (",
              paste(x@params$n,x@params$sd,sep=","), "): ",
              sep=""), pos=4)
@@ -768,12 +775,12 @@ function(x) {
 
         axis(2)
         box(col = x@params$colors$fg.col)
-
+        
       } else {
         # draw width in new frame
         # (high band - low band) / middle band
         bbw <- (bb[,3] - bb[,1]) / bb[,2]
-
+        
         y.range <- seq(min(bbw, na.rm = TRUE) * .9,
                         max(abs(bbw), na.rm = TRUE) * 1.05,
                         length.out = length(x.range))
@@ -782,7 +789,7 @@ function(x) {
 
         lines(seq(1,length(x.range),by=spacing), bbw,
               col=bband.col[5],lwd=1)
-
+        
         text(0,last(y.range) * .9, paste("Bollinger Band Width (",
              paste(x@params$n,x@params$sd,sep=","), "): ",
              sep=""), pos=4)
@@ -798,6 +805,7 @@ function(x) {
 # addEnvelope {{{
 `addEnvelope` <- function(n=20,p=2.5,maType='SMA',...,on=1) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -807,11 +815,11 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   ma <- do.call(maType,list(xx,n=n,...))
   mae <- cbind(ma*(1-p/100),ma,ma*(1+p/100))
-
+  
   chobTA@TA.values <- mae[lchob@xsubset,]
 
   chobTA@name <- "chartEnvelope"
@@ -835,7 +843,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartEnvelope {{{
 `chartEnvelope` <-
@@ -861,19 +869,20 @@ function(x) {
       lines(seq(1,length(x.range),by=spacing),mae[,3],col='blue',lwd=1,lty='dotted')
       #lines(seq(1,length(x.range),by=spacing),mae[,2],col='grey',lwd=1,lty='dotted')
     }
-
+   
     # return the text to be pasted
     txt <- list()
     txt[[1]] <- list(text=paste("Moving Ave. Envelope (",
                    paste(x@params$n,x@params$p,sep=","),") [Upper/Lower]: ",
                    sprintf("%.3f",last(mae[,3])),"/",
-                   sprintf("%.3f",last(mae[,1])), sep = ""), col = 'blue')
+                   sprintf("%.3f",last(mae[,1])), sep = ""), col = 'blue') 
     invisible(txt)
 
 } # }}}
 
 # addSAR {{{
 `addSAR` <- function(accel=c(0.02,0.2),col='blue') {
+
 
   lchob <- get.current.chob()
 
@@ -882,7 +891,7 @@ function(x) {
   chobTA <- new("chobTA")
   chobTA@new <- FALSE
 
-  if(!is.OHLC(x)) stop("SAR requires HL series")
+  if(!is.OHLC(x)) stop("SAR requires HL series") 
 
   sar <- SAR(cbind(Hi(x),Lo(x)),accel=accel)
 
@@ -909,7 +918,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartSAR {{{
 `chartSAR` <-
@@ -930,6 +939,7 @@ function(x) {
 # addMACD {{{
 `addMACD` <- function(fast=12,slow=26,signal=9,type='EMA',histogram=TRUE,col) {
 
+
   lchob <- get.current.chob()
 
   x <- as.matrix(lchob@xdata)
@@ -942,10 +952,10 @@ function(x) {
 
   xx <- if(is.OHLC(x)) {
     Cl(x)
-  } else x
+  } else x 
 
   macd <- MACD(xx,nFast=fast,nSlow=slow,nSig=signal,maType=type)
-
+  
   chobTA@TA.values <- macd[lchob@xsubset,]
 
   chobTA@name <- "chartMACD"
@@ -990,7 +1000,7 @@ function(x) {
       cols <- ifelse((macd[,1]-macd[,2]) > 0, col[1],col[2])
       rect(x.pos - spacing/5,0,x.pos + spacing/5, macd[,1]-macd[,2],
            col=cols,border=cols)
-    }
+    } 
 
     lines(seq(1,length(x.range),by=spacing),macd[,1],col=col[3],lwd=1)
     lines(seq(1,length(x.range),by=spacing),macd[,2],col=col[4],lwd=1,lty='dotted')
@@ -1000,10 +1010,10 @@ function(x) {
                     paste(x@params$fast,x@params$slow,x@params$signal,sep=','),"):", sep = ""),
                     paste("MACD:",sprintf("%.3f",last(macd[,1]))),
                     paste("Signal:",sprintf("%.3f",last(macd[,2])))),
-           text.col=c(x@params$colors$fg.col, col[3], col[4]), bty='n', y.intersp=0.95)
+           text.col=c(x@params$colors$fg.col, col[3], col[4]), bty='n', y.intersp=0.95) 
 #   text(0, last(y.range)*.9,
 #        paste("Moving Average Convergence Divergence (",
-#        paste(x@params$fast,x@params$slow,x@params$signal,sep=','),"):", sep = ""),
+#        paste(x@params$fast,x@params$slow,x@params$signal,sep=','),"):", sep = ""), 
 #        pos = 4)
 
 #   text(0, last(y.range)*.9,
@@ -1029,9 +1039,9 @@ function(x) {
     i <- when
     indexClass(x) <- "POSIXct"
     POSIXindex <- index(x)
-    if (missing(i))
+    if (missing(i)) 
         i <- 1:NROW(x)
-    if (xts::timeBased(i))
+    if (timeBased(i)) 
         i <- as.character(as.POSIXct(i))
     if (is.character(i)) {
         i <- strsplit(i, ';')[[1]]
@@ -1039,21 +1049,21 @@ function(x) {
         for (ii in i) {
             if (!identical(grep("::", ii), integer(0))) {
                 dates <- strsplit(ii, "::")[[1]]
-                first.time <- ifelse(dates[1] == "", POSIXindex[1],
-                  do.call("firstof", as.list(as.numeric(strsplit(dates[1],
+                first.time <- ifelse(dates[1] == "", POSIXindex[1], 
+                  do.call("firstof", as.list(as.numeric(strsplit(dates[1], 
                     ":|-|/| ")[[1]]))))
-                last.time <- ifelse(length(dates) == 1, POSIXindex[length(POSIXindex)],
-                  do.call("lastof", as.list(as.numeric(strsplit(dates[2],
+                last.time <- ifelse(length(dates) == 1, POSIXindex[length(POSIXindex)], 
+                  do.call("lastof", as.list(as.numeric(strsplit(dates[2], 
                     ":|-|/| ")[[1]]))))
             }
             else {
                 dates <- ii
-                first.time <- do.call("firstof", as.list(as.numeric(strsplit(dates,
+                first.time <- do.call("firstof", as.list(as.numeric(strsplit(dates, 
                   ":|-|/| ")[[1]])))
-                last.time <- do.call("lastof", as.list(as.numeric(strsplit(dates,
+                last.time <- do.call("lastof", as.list(as.numeric(strsplit(dates, 
                   ":|-|/| ")[[1]])))
             }
-            i.tmp <- c(i.tmp, which(POSIXindex <= last.time &
+            i.tmp <- c(i.tmp, which(POSIXindex <= last.time & 
                 POSIXindex >= first.time))
         }
         i <- i.tmp
@@ -1083,7 +1093,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartShading {{{
 `chartShading` <-
@@ -1096,7 +1106,7 @@ function(x) {
     y.range <- x@params$yrange
     xstart <- x@params$xstart
     xend <- x@params$xend
-
+ 
     rect(((xstart-1)*spacing+1)-width/2, rep(y.range[1]*.95,length(xstart)),
          ((xend-1)*spacing+1)+width/2, rep(y.range[2]*1.05,length(xend)),
          col=c(x@params$colors$BBands$fill),border=NA)
@@ -1105,7 +1115,7 @@ function(x) {
 
 # addLines {{{
 `addLines` <- function(x,h,v,on=1,overlay=TRUE,col='blue') {
-
+ 
   if(missing(x)) x <- NULL
   if(missing(h)) h <- NULL
   if(missing(v)) v <- NULL
@@ -1136,7 +1146,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartLines {{{
 `chartLines` <-
@@ -1149,10 +1159,10 @@ function(x) {
 
     multi.col <- x@params$multi.col
     color.vol <- x@params$color.vol
-
+ 
     if(!is.null(x@params$x)) {
       # draw lines given positions specified in x
-      lines(x=(x@params$x-1)*spacing+1,col=x@params$col)
+      lines(x=(x@params$x-1)*spacing+1,col=x@params$col)  
     }
     if(!is.null(x@params$h)) {
       # draw horizontal lines given positions specified in h
@@ -1169,14 +1179,14 @@ function(x) {
 `addPoints` <- function(x,y=NULL,type='p',pch=20,
                         offset=1,col=2,bg=2,cex=1,
                         on=1,overlay=TRUE) {
-
+ 
   lchob <- get.current.chob()
   xdata <- as.matrix(lchob@xdata)
 
   chobTA <- new("chobTA")
   chobTA@new <- !overlay
 
-
+  
   chobTA@TA.values <- xdata[lchob@xsubset,]
   chobTA@name <- "chartPoints"
   chobTA@call <- match.call()
@@ -1210,7 +1220,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartPoints {{{
 `chartPoints` <-
@@ -1223,7 +1233,7 @@ function(x) {
 
     multi.col <- x@params$multi.col
     color.vol <- x@params$color.vol
-
+ 
     xdata <- x@TA.values
     x.points <- which(x@params$subset %in% x@params$x)
     y.points <- x@params$y
@@ -1251,6 +1261,7 @@ function(x) {
 # addEMA {{{
 `addEMA` <- function(n=10,wilder=FALSE,ratio=NULL,on=1,with.col=Cl,overlay=TRUE,col='blue') {
 
+
   lchob <- get.current.chob()
   chobTA <- new("chobTA")
   chobTA@new <- !overlay
@@ -1273,7 +1284,7 @@ function(x) {
     x <- as.matrix(target.TA@TA.values)
 
     if(missing(with.col)) with.col <- 1
-
+      
     if(is.function(with.col)) {
       x.tmp <- do.call(with.col,list(x))
     } else x.tmp <- x[,with.col]
@@ -1310,7 +1321,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartEMA {{{
 `chartEMA` <-
@@ -1326,8 +1337,8 @@ function(x) {
 
     if(length(x@params$n) != length(x@params$col)) {
       colors <- 3:10
-    } else colors <- x@params$col
-
+    } else colors <- x@params$col 
+ 
     chart.key <- list()
 
     for(li in 1:length(x@params$n)) {
@@ -1347,7 +1358,7 @@ function(x) {
       chart.key[[li]] <- list(text=paste("EMA (",
                    paste(x@params$n[li],sep=","),"): ",
                    sprintf("%.3f",last(ma)),
-                   sep = ""), col = colors[li])
+                   sep = ""), col = colors[li]) 
 
     }
     invisible(chart.key)
@@ -1356,6 +1367,7 @@ function(x) {
 
 # addSMA {{{
 `addSMA` <- function(n=10,on=1,with.col=Cl,overlay=TRUE,col='brown') {
+
 
   lchob <- get.current.chob()
   chobTA <- new("chobTA")
@@ -1411,7 +1423,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartSMA {{{
 `chartSMA` <-
@@ -1429,7 +1441,7 @@ function(x) {
       colors <- c(4:10,3)
     } else colors <- x@params$col
 
-    chart.key <- list()
+    chart.key <- list() 
 
     for(li in 1:length(x@params$n)) {
       ma <- x@TA.values[,li]
@@ -1444,8 +1456,8 @@ function(x) {
         box(col=x@params$colors$fg.col)
       }
       lines(seq(1,length(x.range),by=spacing),ma,col=colors[li],lwd=1,type='l')
-      chart.key[[li]] <- list(text = paste("SMA (", paste(x@params$n[li],
-            sep = ","), "): ", sprintf("%.3f", last(ma)), sep = ""),
+      chart.key[[li]] <- list(text = paste("SMA (", paste(x@params$n[li], 
+            sep = ","), "): ", sprintf("%.3f", last(ma)), sep = ""), 
             col = colors[li])
     }
     invisible(chart.key)
@@ -1453,6 +1465,7 @@ function(x) {
 
 # addWMA {{{
 `addWMA` <- function(n=10,wts=1:n,on=1,with.col=Cl,overlay=TRUE,col='green') {
+
 
   lchob <- get.current.chob()
   chobTA <- new("chobTA")
@@ -1502,7 +1515,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartWMA {{{
 `chartWMA` <-
@@ -1519,7 +1532,7 @@ function(x) {
     if(length(x@params$n) < length(x@params$col)) {
       colors <- 3:10
     } else colors <- x@params$col
-
+ 
     for(li in 1:length(x@params$n)) {
       ma <- WMA(x@TA.values,n=x@params$n[li],wts=x@params$wts)
       if(x@new) {
@@ -1536,6 +1549,7 @@ function(x) {
 
 # addDEMA {{{
 `addDEMA` <- function(n=10,on=1,with.col=Cl,overlay=TRUE,col='pink') {
+
 
   lchob <- get.current.chob()
   chobTA <- new("chobTA")
@@ -1585,7 +1599,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartDEMA {{{
 `chartDEMA` <-
@@ -1602,7 +1616,7 @@ function(x) {
     if(length(x@params$n) < length(x@params$col)) {
       colors <- 3:10
     } else colors <- x@params$col
-
+ 
     for(li in 1:length(x@params$n)) {
       ma <- DEMA(x@TA.values,n=x@params$n[li])
       if(x@new) {
@@ -1619,6 +1633,7 @@ function(x) {
 
 # addEVWMA {{{
 `addEVWMA` <- function(n=10,on=1,with.col=Cl,overlay=TRUE,col='yellow') {
+
 
   lchob <- get.current.chob()
   chobTA <- new("chobTA")
@@ -1669,7 +1684,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartEVWMA {{{
 `chartEVWMA` <-
@@ -1686,7 +1701,7 @@ function(x) {
     if(length(x@params$n) < length(x@params$col)) {
       colors <- 3:10
     } else colors <- x@params$col
-
+ 
     for(li in 1:length(x@params$n)) {
       ma <- EVWMA(x@TA.values[,1],x@TA.values[,2],n=x@params$n[li])
       if(x@new) {
@@ -1703,6 +1718,7 @@ function(x) {
 
 # addZLEMA {{{
 `addZLEMA` <- function(n=10,ratio=NULL,on=1,with.col=Cl,overlay=TRUE,col='red') {
+
 
   lchob <- get.current.chob()
   chobTA <- new("chobTA")
@@ -1756,7 +1772,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartZLEMA {{{
 `chartZLEMA` <-
@@ -1773,7 +1789,7 @@ function(x) {
     if(length(x@params$n) < length(x@params$col)) {
       colors <- 3:10
     } else colors <- x@params$col
-
+ 
     for(li in 1:length(x@params$n)) {
       ma <- ZLEMA(x@TA.values,n=x@params$n[li],ratio=x@params$ratio)
       if(x@new) {
@@ -1824,7 +1840,7 @@ function(x) {
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } # }}}
 # chartExpiry {{{
 `chartExpiry` <-
@@ -1850,13 +1866,13 @@ function(x) {
     lchob <- get('chob',envir=first.chob)
 
 #  if(exists('chob',envir=sys.frames()[[sys.parent()]])) {
-#    if(identical(sys.frames()[[sys.parent()]],.GlobalEnv))
+#    if(identical(sys.frames()[[sys.parent()]],.GlobalEnv)) 
 #      stop("why are you calling this directly?")
 #    lchob <- get('chob',envir=sys.frames()[[sys.parent()]])
   } else {
     gchob <- get.chob()
     #protect against NULL device or windows not drawn to yet
-    if(dev.cur()==1 || length(gchob) < dev.cur())
+    if(dev.cur()==1 || length(gchob) < dev.cur()) 
       stop("improperly set or missing graphics device")
     current.chob <- which(sapply(gchob,
                                  function(x) {

@@ -2,6 +2,7 @@ export(quantmodenv, .quantmodEnv)
 S3method(print, quantmodEnv)
 
 # NAMESPACE file for quantmod
+import(methods, zoo, xts, TTR)
 importFrom(graphics,plot)
 importFrom(stats,predict)
 importFrom(stats,lag)
@@ -14,9 +15,6 @@ importFrom(stats,logLik)
 importFrom(stats,residuals)
 importFrom(stats,resid)
 importFrom(stats,anova)
-importFrom(zoo, as.yearmon, as.zoo, coredata, index, "index<-", na.approx, zoo)
-
-import(TTR, methods, xts)
 
 # new plotting functions (experimental)
 export(new.replot,
@@ -48,7 +46,7 @@ export(.chart.theme,chartTheme)
 export(listTA,
        setTA,
        unsetTA,
-
+       
        addTA,
        chartTA,
        newTA,
@@ -74,10 +72,10 @@ export(
       #add.curve,
       #add.rect,
       #add.segments,
-
+      
       )
 
-
+     
 
 # TTR functionality
 export(
@@ -95,7 +93,7 @@ export(
 
        addOBV,      # on balance volume
        addCLV,      # close location value
-       addEMV,      # ease of movement
+       addEMV,      # ease of movement 
        addChAD,     # chaikin AD
        addChVol,    # chaikin Volatility
        addVolatility, # volatility (close, garman.klass, parkinson, rogers.satchell)
@@ -106,8 +104,8 @@ export(
        addMFI,      # money flow index
        addTDI,      # trend detection index
        addSMI,   	# stochastic momentum index
-       addADX,   	# directional movement index
-       addDPO,   	# de-trended price oscillator
+       addADX,   	# directional movement index 
+       addDPO,   	# de-trended price oscillator 
        addCCI,   	# commodity channel index
        addCMF,   	# chaikin money flow
        addCMO,   	# chande momentum oscillator
@@ -244,7 +242,7 @@ export(
 
 export(
        # main charting functions
-
+ 
        chartSeries,
        reChart,
        saveChart,
@@ -258,6 +256,13 @@ export(
        matchChart
       )
 
+# Defaults functionality
+export( 
+       importDefaults,
+       setDefaults,
+       unsetDefaults,
+       getDefaults
+      )
 
 # S3 methods
 S3method(seriesHi,default)

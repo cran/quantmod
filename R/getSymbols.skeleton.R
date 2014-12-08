@@ -4,6 +4,7 @@ function(Symbols,env,
          # additional source specific params
          return.class="zoo",
          ...) {
+  importDefaults("")
   this.env <- environment()
   for(var in names(list(...))) {
     assign(var,list(...)[[var]], this.env)
@@ -20,12 +21,12 @@ function(Symbols,env,
 
   #################################################################
   #  Loop through all possible Symbols given in function call
-  #
+  # 
   #################################################################
 
   for(i in 1:length(Symbols)) {
 
-
+  
     #################################################################
 
     # repeat the following 2 assignments for all default arguments
@@ -35,7 +36,7 @@ function(Symbols,env,
                            return.class)
 
     #################################################################
-
+    
     if(verbose) cat("loading ",Symbols[[i]],".....")
 
     #################################################################
@@ -46,7 +47,7 @@ function(Symbols,env,
     fr <- # assign to 'fr'ame
 
 
-    if(verbose)
+    if(verbose)  
       cat("done.\n")
 
     #################################################################

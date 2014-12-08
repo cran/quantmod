@@ -36,7 +36,7 @@
     invisible(chobTA)
   } else {
    return(chobTA)
-  }
+  } 
 } #}}}
 # chartCMF {{{
 `chartCMF` <-
@@ -53,7 +53,7 @@ function(x) {
     n <- x@params$n
     cmf <- x@TA.values
 
-    y.range <- seq(-max(abs(cmf), na.rm = TRUE), max(abs(cmf),
+    y.range <- seq(-max(abs(cmf), na.rm = TRUE), max(abs(cmf), 
                    na.rm = TRUE), length.out = length(x.range)) * 1.05
 
     plot(x.range,y.range,
@@ -72,12 +72,12 @@ function(x) {
     abline(h=0,col="#999999")
 
     text(0, last(y.range)*.9,
-         paste("Chaikin Money Flow (", x@params$n,"):", sep = ""),
+         paste("Chaikin Money Flow (", x@params$n,"):", sep = ""), 
         pos = 4)
 
     text(0, last(y.range)*.9,
-        paste("\n\n\n",sprintf("%.3f",last(cmf)), sep = ""),
-        col = ifelse(last(cmf) > 0,x@params$colors$up.col,x@params$colors$dn.col),
+        paste("\n\n\n",sprintf("%.3f",last(cmf)), sep = ""), 
+        col = ifelse(last(cmf) > 0,x@params$colors$up.col,x@params$colors$dn.col), 
         pos = 4)
 
     axis(2)
