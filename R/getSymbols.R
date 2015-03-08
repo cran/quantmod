@@ -20,7 +20,7 @@ function(Symbols=NULL,
                 'default to use auto.assign=FALSE. getOption("getSymbols.env") and \n',
                 'getOptions("getSymbols.auto.assign") are now checked for alternate defaults\n\n',
                 'This message is shown once per session and may be disabled by setting \n',
-                'options("getSymbols.warning4.0"=FALSE). See ?getSymbol for more details'))
+                'options("getSymbols.warning4.0"=FALSE). See ?getSymbols for more details.'))
         options("getSymbols.warning4.0"=FALSE) 
       }
       importDefaults("getSymbols")
@@ -225,7 +225,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
-     if(!exists("adjust", environment(), inherits=FALSE))
+     if(!hasArg(adjust))
        adjust <- FALSE
 
      default.return.class <- return.class
@@ -297,6 +297,161 @@ function(Symbols,env,return.class='xts',index.class="Date",
        return(Symbols)
      return(fr)
 }
+# }}}
+
+# getSymbols.yahooj {{{
+"getSymbols.yahooj" <-
+    function(Symbols, env=parent.frame(), return.class='xts', index.class="Date",
+             from='2007-01-01',
+             to=Sys.Date(),
+             ...)
+    {
+        importDefaults("getSymbols.yahooj")
+        this.env <- environment()
+        for(var in names(list(...))) {
+            # import all named elements that are NON formals
+            assign(var, list(...)[[var]], this.env)
+        }
+        if(!hasArg(adjust))
+            adjust <- FALSE
+        
+        default.return.class <- return.class
+        default.from <- from
+        default.to <- to
+        
+        if(!hasArg(verbose)) verbose <- FALSE
+        if(!hasArg(auto.assign)) auto.assign <- TRUE
+
+        if(!requireNamespace("XML", quietly=TRUE))
+          stop("package:",dQuote("XML"),"cannot be loaded.")
+
+        yahoo.URL <- "http://info.finance.yahoo.co.jp/history/"
+        for(i in 1:length(Symbols)) {
+            # The name of the symbol, which will actually be used as the
+            # variable name. It needs to start with YJ, and it will be appended
+            # if it does not.
+            symname <- toupper(Symbols[[i]])
+            
+            # The symbol actually sent to Yahoo Japan. This is without the
+            # starting YJ bit.
+            symbol <- symname
+            
+            # If it starts with YJ, try looking up defaults
+            if (grepl("^YJ", symname)) {
+                return.class <- getSymbolLookup()[[symname]]$return.class
+                return.class <- ifelse(is.null(return.class),default.return.class,
+                                       return.class)
+                from <- getSymbolLookup()[[symname]]$from
+                from <- if(is.null(from)) default.from else from
+                to <- getSymbolLookup()[[symname]]$to
+                to <- if(is.null(to)) default.to else to
+                
+                # Extract the actual symbol to be sent to Yahoo Japan
+                symbol <- substring(symname, 3)
+            } else {
+                return.class <- default.return.class
+                from <- default.from
+                to <- default.to
+                
+                # Prepend 'YJ' to the symbol and store it in symname
+                symname <- paste('YJ', symbol, sep="")
+            }
+
+            from.y <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][1])
+            from.m <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][2])
+            from.d <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][3])
+            to.y <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][1])
+            to.m <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][2])
+            to.d <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][3])
+            
+            Symbols.name <- getSymbolLookup()[[symname]]$name
+            Symbols.name <- ifelse(is.null(Symbols.name),symbol,Symbols.name)
+            if(verbose) cat("downloading ",Symbols.name,".....\n\n")
+            
+            page <- 1
+            totalrows <- c()
+            while (TRUE) {
+                tmp <- tempfile()
+                download.file(paste(yahoo.URL,
+                                    "?code=",Symbols.name,
+                                    "&sm=",from.m,
+                                    "&sd=",sprintf('%.2d',from.d),
+                                    "&sy=",from.y,
+                                    "&em=",to.m,
+                                    "&ed=",sprintf('%.2d',to.d),
+                                    "&ey=",to.y,
+                                    "&tm=d",
+                                    "&p=",page,
+                                    sep=''),destfile=tmp,quiet=!verbose)
+                
+                fdoc <- XML::htmlParse(tmp)
+                unlink(tmp)
+                
+                rows <- XML::xpathApply(fdoc, "//table[@class='boardFin yjSt marB6']//tr")
+                if (length(rows) == 1) break
+                
+                totalrows <- c(totalrows, rows)
+                page <- page + 1
+            }
+            if(verbose) cat("done.\n")
+            
+            # Available columns
+            cols <- c('Open','High','Low','Close','Volume','Adjusted')
+            if (grepl(".O$", Symbols.name)) cols <- cols[-(5:6)]
+            
+            # Process from the start, for easier stocksplit management
+            totalrows <- rev(totalrows)
+            mat <- matrix(0, ncol=length(cols) + 1, nrow=0, byrow=TRUE)
+            for(row in totalrows) {
+                cells <- XML::getNodeSet(row, "td")
+                
+                # 2 cells means it is a stocksplit row
+                # So extract stocksplit data and recalculate the matrix we have so far
+                if (length(cells) == 2 & length(cols) == 6 & nrow(mat) > 1) {
+                    ss.data <- as.numeric(na.omit(as.numeric(unlist(strsplit(XML::xmlValue(cells[[2]]), "[^0-9]+")))))
+                    factor <- ss.data[2] / ss.data[1]
+                    
+                    mat <- rbind(t(apply(mat[-nrow(mat),], 1, function(x) {
+                        x * c(1, rep(1/factor, 4), factor, 1)
+                    })), mat[nrow(mat),])
+                }
+                
+                if (length(cells) != length(cols) + 1) next
+                
+                # Parse the Japanese date format using UTF characters
+                # \u5e74 = "year"
+                # \u6708 = "month"
+                # \u65e5 = "day"
+                date <- as.Date(XML::xmlValue(cells[[1]]), format="%Y\u5e74%m\u6708%d\u65e5")
+                entry <- c(date)
+                for(n in 2:length(cells)) {
+                    entry <- cbind(entry, as.numeric(gsub(",", "", XML::xmlValue(cells[[n]]))))
+                }
+                
+                mat <- rbind(mat, entry)
+            }
+            
+            fr <- xts(mat[, -1], as.Date(mat[, 1]), src="yahooj", updated=Sys.time())
+            
+            colnames(fr) <- paste(symname, cols, sep='.')
+            
+            fr <- convert.time.series(fr=fr,return.class=return.class)
+            if(is.xts(fr))
+                indexClass(fr) <- index.class
+            
+            Symbols[[i]] <- symname
+            if(auto.assign)
+                assign(Symbols[[i]],fr,env)
+            if(i >= 5 && length(Symbols) > 5) {
+                message("pausing 1 second between requests for more than 5 symbols")
+                Sys.sleep(1)
+            }
+            
+        }
+        if(auto.assign)
+            return(Symbols)
+        return(fr)
+    }
 # }}}
 
 # getSymbols.google {{{
@@ -385,12 +540,12 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-        if('package:DBI' %in% search() || require('DBI',quietly=TRUE)) {
-          if('package:RSQLite' %in% search() || require('RSQLite',quietly=TRUE)) {
-          } else { warning(paste("package:",dQuote("RSQLite"),"cannot be loaded" )) }
-        } else {
-          stop(paste("package:",dQuote('DBI'),"cannot be loaded."))
-        }
+
+     if(!requireNamespace("DBI", quietly=TRUE))
+       stop("package:",dQuote("DBI"),"cannot be loaded.")
+     if(!requireNamespace("RSQLite", quietly=TRUE))
+       stop("package:",dQuote("RSQLite"),"cannot be loaded.")
+
         drv <- DBI::dbDriver("SQLite")
         con <- DBI::dbConnect(drv,dbname=dbname)
         db.Symbols <- DBI::dbListTables(con)
@@ -449,12 +604,12 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-        if('package:DBI' %in% search() || require('DBI',quietly=TRUE)) {
-          if('package:RMySQL' %in% search() || require('RMySQL',quietly=TRUE)) {
-          } else { warning(paste("package:",dQuote("RMySQL"),"cannot be loaded" )) }
-        } else {
-          stop(paste("package:",dQuote('DBI'),"cannot be loaded."))
-        }
+
+     if(!requireNamespace("DBI", quietly=TRUE))
+       stop("package:",dQuote("DBI"),"cannot be loaded.")
+     if(!requireNamespace("RMySQL", quietly=TRUE))
+       stop("package:",dQuote("RMySQL"),"cannot be loaded.")
+
         if(is.null(user) || is.null(password) || is.null(dbname)) {
           stop(paste(
               'At least one connection argument (',sQuote('user'),
@@ -864,8 +1019,6 @@ function(Symbols,env,return.class='xts',
          to=Sys.Date(),
          ...) {
      importDefaults("getSymbols.oanda")
-     if( (as.Date(to)-as.Date(from)) > 500 )
-       stop("oanda.com limits data to 500 days per request", call.=FALSE)
      this.env <- environment()
      for(var in names(list(...))) {
         # import all named elements that are NON formals
@@ -881,23 +1034,21 @@ function(Symbols,env,return.class='xts',
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
 
-     oanda.URL <- "http://www.oanda.com/convert/fxhistory?lang=en&"
+     # Request minimum data from server to fulfill user's request
+     daySpans <- c(7, 30, 60, 90, 180, 364, 728, 1820)
+     dateStr <- c("d7", "d30", "d60", "d90", "d180", "y1", "y2", "y5")
+
      for(i in 1:length(Symbols)) {
        return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
        return.class <- ifelse(is.null(return.class),default.return.class,
                               return.class)
        from <- getSymbolLookup()[[Symbols[[i]]]]$from
        from <- ifelse(is.null(from),default.from,from)
+       from <- as.Date(from, origin='1970-01-01')
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- ifelse(is.null(to),default.to,to)
-   
-       if(as.Date(to,origin='1970-01-01')-as.Date(from,origin='1970-01-01') > 499) stop("oanda limits data to 500 days")
-       # automatically break larger requests into equal sized smaller request at some point
-       # for now just let it remain
+       to <- as.Date(to, origin='1970-01-01')
 
-       from.date <- format(as.Date(from,origin='1970-01-01'),"date1=%m%%2F%d%%2F%y&")
-       to.date <- format(as.Date(to,origin='1970-01-01'),"date=%m%%2F%d%%2F%y&date_fmt=us&")
-       
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        currency.pair <- strsplit(toupper(Symbols.name),"/")[[1]]
@@ -908,19 +1059,36 @@ function(Symbols,env,return.class='xts',
 
        if(verbose) cat("downloading ",Symbols.name,".....")
        tmp <- tempfile()
-       download.file(paste(oanda.URL,from.date,to.date,"exch=",currency.pair[1],
-                       "&expr2=",currency.pair[2],
-                       "&margin_fixed=0&SUBMIT=Get+Table&format=CSV&redirected=1",
-                       sep=""),destfile=tmp,quiet=!verbose)
-       fr <- readLines(tmp, warn=FALSE)
+       # Request minimum data from server to fulfill user's request
+       dateDiff <- difftime(to, from, units="days")
+       dateLoc <- which(daySpans >= dateDiff)
+       # throw warning, but return as much data as possible
+       if(!length(dateLoc)) {
+           warning("Oanda limits data to 5years. Symbol: ", Symbols[[i]])
+           dateLoc <- length(dateStr)
+       }
+       data_range <- dateStr[dateLoc[1]]
+       oanda.URL <- paste("http://www.oanda.com/currency/historical-rates/download?",
+         "quote_currency=", currency.pair[1],
+         "&end_date=", to,
+         "&start_date=", from,
+         "&period=daily&display=absolute&rate=0",
+         "&data_range=", data_range,
+         "&price=mid&view=table",
+         "&base_currency_0=", currency.pair[2],
+         "&base_currency_1=&base_currency_2=&base_currency_3=&base_currency_4=&download=csv",
+         sep="")
+       download.file(oanda.URL, destfile=tmp, quiet=!verbose)
+       fr <- read.csv(tmp, skip=4, as.is=TRUE, header=TRUE)
        unlink(tmp)
-       fr <- unlist(strsplit(
-                    gsub("<PRE>|</PRE>","",fr[(grep("PRE",fr)[1]):(grep("PRE",fr)[2])]),","))
+       fr[,1L] <- as.Date(fr[,1L], origin="1970-01-01")
+       fr <- na.omit(fr[,1:2])    # remove period mean/min/max from end of file
+       if(is.character(fr[,2L]))  # remove thousands seperator and convert
+         fr[,2L] <- as.numeric(gsub(",", "", fr[,2L], fixed=TRUE))
 
        if(verbose) cat("done.\n")
-       fr <- xts(as.numeric(fr[1:length(fr)%%2!=1]),as.Date(fr[1:length(fr)%%2==1],"%m/%d/%Y",origin='1970-01-01'),
-                 src='oanda',updated=Sys.time())
-       dim(fr) <- c(length(fr),1)
+       fr <- xts(fr[,-1L], fr[,1L], src='oanda', updated=Sys.time())
+       fr <- fr[paste(from, to, sep="/")]  # subset to requested timespan
        colnames(fr) <- gsub("/",".",Symbols[[i]])
        fr <- convert.time.series(fr=fr,return.class=return.class)
        Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]])) 
@@ -957,7 +1125,7 @@ function(Symbols,env,return.class='xts',
          return(fr)
        } else
        if('its' %in% return.class) {
-         if("package:its" %in% search() || suppressMessages(require("its", quietly=TRUE))) {
+         if(requireNamespace("its", quietly=TRUE)) {
            fr.dates <- as.POSIXct(as.character(index(fr)))
            fr <- its::its(coredata(fr),fr.dates)
            return(fr)
@@ -967,7 +1135,7 @@ function(Symbols,env,return.class='xts',
          }
        } else 
        if('timeSeries' %in% return.class) {
-         if("package:timeSeries" %in% search() || suppressMessages(require("timeSeries",quietly=TRUE))) {
+         if(requireNamespace("timeSeries", quietly=TRUE)) {
            fr <- timeSeries::timeSeries(coredata(fr), charvec=as.character(index(fr)))
            return(fr)
          } else {

@@ -8,63 +8,92 @@ function(Symbols, Exp=NULL, src="yahoo", ...) {
   }
 }
 
-
 getOptionChain.yahoo <- function(Symbols, Exp, ...)
 {
-  parse.expiry <- function(x) {
-    if(is.null(x))
-      return(NULL)
+  if(!requireNamespace("XML", quietly=TRUE))
+    stop("package:",dQuote("XML"),"cannot be loaded.")
 
-    if(inherits(x, "Date") || inherits(x, "POSIXt"))
-      return(format(x, "%Y-%m"))
-
-    if (nchar(x) == 5L) {
-      x <- sprintf(substring(x, 4, 5), match(substring(x, 
-          1, 3), month.abb), fmt = "20%s-%02i")
+  thParse <- function(x) {
+    if (length(XML::xmlChildren(x)) > 1) {
+      XML::xmlValue(x[["div"]][["div"]])
+    } else {
+      XML::xmlValue(x)
     }
-    else if (nchar(x) == 6L) {
-      x <- paste(substring(x, 1, 4), substring(x, 5, 6), 
-          sep = "-")
+  }
+  NewToOld <- function(x) {
+    d <- with(x, data.frame(Strike, Last, Chg=Change, Bid, Ask, Vol=Volume,
+      OI=`Open Interest`, row.names=`Contract Name`, stringsAsFactors=FALSE))
+    d[] <- lapply(d, type.convert, as.is=TRUE)
+    d
+  }
+
+  # Don't check the expiry date if we're looping over dates we just scraped
+  checkExp <- !hasArg(".expiry.known") || !match.call(expand.dots=TRUE)$.expiry.known
+  # Construct URL
+  urlExp <- paste0("http://finance.yahoo.com/q/op?s=", Symbols[1])
+  # Add expiry date to URL
+  if(!checkExp)
+    urlExp <- paste0(urlExp, "&date=", Exp)
+
+  # Fetch data; ensure object is free'd on function exit
+  tbl <- XML::htmlParse(urlExp, isURL=TRUE)
+  on.exit(XML::free(tbl))
+
+  # xpaths to the data we're interested in
+  xpaths <- list()
+  xpaths$tables <- "//table[contains(@class, 'quote-table')]"
+  xpaths$table.names <- paste0(xpaths$tables, "/caption/text()")
+  xpaths$headers <- paste0(xpaths$tables, "/thead/tr[not(contains(@class, 'filterRangeRow'))]")
+  xpaths$expiries <- "//div[contains(@class, 'options_menu')]/form/select//option"
+
+  # Extract table names and headers
+  table.names <- XML::xpathSApply(tbl, xpaths$table.names, XML::xmlValue)
+  table.names <- tolower(gsub("[[:space:]]", "", table.names))
+  table.headers <- XML::xpathApply(tbl, xpaths$headers, fun=function(x) sapply(x['th'], thParse))
+
+  # Only return nearest expiry (default served by Yahoo Finance), unless the user specified Exp
+  if(!missing(Exp) && checkExp) {
+    all.expiries <- XML::xpathSApply(tbl, xpaths$expiries, XML::xmlGetAttr, name="value")
+    all.expiries.posix <- .POSIXct(as.numeric(all.expiries), tz="UTC")
+
+    if(is.null(Exp)) {
+      # Return all expiries if Exp = NULL
+      out <- lapply(all.expiries, getOptionChain.yahoo, Symbols=Symbols, .expiry.known=TRUE)
+      # Expiry format was "%b %Y", but that's not unique with weeklies. Change
+      # format to "%b.%d.%Y" ("%Y-%m-%d wouldn't be good, since names should
+      # start with a letter or dot--naming things is hard).
+      return(setNames(out, format(all.expiries.posix, "%b.%d.%Y")))
+    } else {
+      # Ensure data exist for user-provided expiry date(s)
+      if(inherits(Exp, "Date"))
+        valid.expiries <- as.Date(all.expiries.posix) %in% Exp
+      else if(inherits(Exp, "POSIXt"))
+        valid.expiries <- all.expiries.posix %in% Exp
+      else if(is.character(Exp)) {
+        expiry.range <- range(unlist(lapply(Exp, .parseISO8601, tz="UTC")))
+        valid.expiries <- all.expiries.posix >= expiry.range[1] &
+                          all.expiries.posix <= expiry.range[2]
+      }
+      if(all(!valid.expiries))
+        stop("Provided expiry date(s) not found. Available dates are: ",
+             paste(as.Date(all.expiries.posix), collapse=", "))
+
+      expiry.subset <- all.expiries[valid.expiries]
+      if(length(expiry.subset) == 1)
+        return(getOptionChain.yahoo(Symbols, expiry.subset, .expiry.known=TRUE))
+      else {
+        out <- lapply(expiry.subset, getOptionChain.yahoo, Symbols=Symbols, .expiry.known=TRUE)
+        # See comment above regarding the output names
+        return(setNames(out, format(all.expiries.posix[valid.expiries], "%b.%d.%Y")))
+      }
     }
-
-    return(x)
   }
 
-  parseOptionTable_ <- function(x) {
-    opt <- x
-    os <- lapply(as.list(lapply(strsplit(opt,"<tr>"), function(.) gsub(",","",gsub("N/A","NA",gsub("(^ )|( $)","",gsub("[ ]+"," ",gsub("<.*?>"," ", .))))))[[1]]), function(.) strsplit(.," ")[[1]])
-    which.opts <- sapply(os,function(.) length(.)==8)
-    up <- grep("Up", strsplit(opt, "<tr>")[[1]][which.opts])
-    dn <- grep("Down", strsplit(opt, "<tr>")[[1]][which.opts])
-    allcontracts <- do.call(rbind,os[sapply(os,function(.) length(.) == 8)])
-    rownames. <- allcontracts[,2]
-    allcontracts <- allcontracts[,-2]
-    suppressWarnings(storage.mode(allcontracts) <- "double")
-    allcontracts[dn,3] <- allcontracts[dn,3]*-1
-    allcontracts <- data.frame(allcontracts)
-    rownames(allcontracts) <- rownames.
-    colnames(allcontracts) <- c("Strike", "Last", "Chg", "Bid", "Ask", "Vol", "OI")
-  
-    call.rows <- which(substr(sprintf("%21s", rownames.),13,13) == "C")
-    list(allcontracts[call.rows,], allcontracts[-call.rows,])
-  }
+  dftables <- XML::xmlApply(XML::getNodeSet(tbl, xpaths$tables), XML::readHTMLTable, stringsAsFactors=FALSE)
+  names(dftables) <- table.names
 
-  if(missing(Exp))
-    opt <- readLines(paste(paste("http://finance.yahoo.com/q/op?s",Symbols,sep="="),"Options",sep="+"), warn=FALSE)
-  else
-    opt <- readLines(paste(paste("http://finance.yahoo.com/q/op?s=",Symbols,"&m=",parse.expiry(Exp),sep=""),"Options",sep="+"), warn=FALSE)
-  opt <- opt[grep("Expire at",opt)]
-  opt <- gsub("%5E","",opt)
-
-  if(!missing(Exp) && is.null(Exp)) {
-    ViewByExp <- grep("View By Expiration",strsplit(opt, "<tr.*?>")[[1]])
-    allExp <- substr(strsplit(strsplit(opt,"<tr.*?>")[[1]][ViewByExp],"m=")[[1]][-1],0,7)
-    # fix for missing current month in links
-    # allExp <- c(format(as.yearmon(allExp[1]) - 1/12, "%Y-%m"), allExp)
-
-    return(structure(lapply(allExp, getOptionChain.yahoo, Symbols=Symbols), .Names=format(as.yearmon(allExp))))
-  }
-  calls_puts <- parseOptionTable_(opt)
-  list(calls=calls_puts[[1]],puts=calls_puts[[2]],symbol=Symbols)
+  dftables <- mapply(setNames, dftables, table.headers, SIMPLIFY=FALSE)
+  dftables <- lapply(dftables, NewToOld)
+  dftables
 }
 
