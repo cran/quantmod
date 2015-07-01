@@ -661,7 +661,8 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-     FRED.URL <- "http://research.stlouisfed.org/fred2/series"
+     method <- if(capabilities("libcurl")) "libcurl" else "curl"  
+     FRED.URL <- "https://research.stlouisfed.org/fred2/series"
      for(i in 1:length(Symbols)) {
        if(verbose) cat("downloading ",Symbols[[i]],".....\n\n")
        tmp <- tempfile()
@@ -669,7 +670,7 @@ function(Symbols,env,return.class='xts',
                             Symbols[[i]],"/",
                             "downloaddata/",
                             Symbols[[i]],".csv",sep=""),
-                            destfile=tmp,quiet=!verbose)
+                            destfile=tmp,quiet=!verbose,method=method)
        fr <- read.csv(tmp,na.string=".")
        unlink(tmp)
        if(verbose) cat("done.\n")
