@@ -1,10 +1,10 @@
 00bbff4678cbb80cd0f11a327e337767 *CHANGES
-dc2b42346c28d7f64aaed06068018ded *DESCRIPTION
+bcb0a91a3043a8d704f642ab85953a51 *DESCRIPTION
 8c14e685bedeac9c25b5b0b783fcfcda *NAMESPACE
 3b267451bc179298cdb5ac77b3caeeb0 *R/Defaults.R
 fea30b0226f717064ccc77364ffa8c99 *R/OHLC.transformations.R
 3eb6c31d57d927394ac1732823b7e519 *R/Price.transformations.R
-2214c3ffe2495bd24eb4540825f05def *R/SymbolLookup.R
+09a54ce40bdb58e7a9f441568ea9b22e *R/SymbolLookup.R
 6206bb77e4fcd8747498b634c9ae220b *R/TA.R
 00ad99d89afa48a302dffa2cb3dd6435 *R/addAroon.R
 825af5a63720291e1819f730769c6735 *R/addCLV.R
@@ -16,7 +16,7 @@ b05bb2018824b4848142635623a6797a *R/addChaikin.R
 d2893f990b3be741a531bbdd2646a910 *R/addMFI.R
 d06e8523237e971e6f8c5de7d7eb6830 *R/addOBV.R
 f599c02f921f247bbb81a82a97617812 *R/addSMI.R
-a93c38463287b7528cfeadd634416b3f *R/addTA.R
+3dd9837ff0a2cfd5679da7aa2fba60eb *R/addTA.R
 1924f59377e51122577e642720617c8d *R/addTDI.R
 2c2f33d65a3a88dfc132de94d930468b *R/addVo.R
 dd6c35740031d9202898eea236dbd6e1 *R/addVolatility.R
@@ -37,10 +37,10 @@ cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
 b4c7c78c7618f70a6d61108379a7bf70 *R/getDividends.R
 ca72e4fe607f117cced5ba897d391d76 *R/getFinancials.R
 b7d8972d888dbcbb8f7ddd463b286899 *R/getModelData.R
-07ecae3e3e491f72e0ae5edf48399dc5 *R/getOptionChain.R
+4b219bba662f59899d94cc2ee509a4c3 *R/getOptionChain.R
 62997a4c001de02de36ed829e1552b54 *R/getQuote.R
 60f3d9dacd330e29832d1adee47fa632 *R/getSplits.R
-a080f06e13b8c46e35c002063015f01b *R/getSymbols.R
+2eb4b2c1b932b991b627c7baa37243c2 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
 ce5eaff302ecf73b9767a2f8446f9ae8 *R/loadSymbols.R
 d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
@@ -71,7 +71,7 @@ afd7a0159368fb7cbfba3c49c52c46fa *man/Defaults.Rd
 e234ab5d06debe9c1ce04fd836f9df92 *man/Delt.Rd
 e4d807e1a7429aadabe5e101f9938a3f *man/Lag.Rd
 c9f0ebbedb0634e5a53cb0f9a8b4803c *man/Next.Rd
-18cfe86cb504d0125acb59ed1b09199d *man/OHLC.Transformations.Rd
+de8e9dc3d96feafdfc9c38750d218cfb *man/OHLC.Transformations.Rd
 913ad3d605b9eb5271b329ce4aa3758e *man/TA.Rd
 a1d9d4bb93ba68b358aba254fdddc943 *man/addADX.Rd
 434e56ba51aaf14912695d66fd900c09 *man/addBBands.Rd
@@ -124,10 +124,10 @@ ec7ef567a8d637b5a35be5393cfbc70b *man/getSymbols.yahooj.Rd
 613eafafc8dbf5efff13ea525049dd9a *man/peak.Rd
 bc6581844a8666a1a3e21786dda9e1b8 *man/periodReturn.Rd
 1bc893d43208cf1329903928d6df751f *man/quantmod-class.Rd
-e85e5d1a669d7af4e423ca5216be3a6e *man/quantmod-package.Rd
+ad1e9395da80dd965afb1d4651bf707a *man/quantmod-package.Rd
 f93d01b8ea2c1ff138f675e047a382ef *man/quantmod.OHLC.Rd
 b8c1ada5347961c4591f0be419ab4870 *man/saveChart.Rd
-98cd75faa73ab86ab49e2c3faa658d57 *man/setSymbolLookup.Rd
+5dad5e24a2ca3054c8084d06fc26576d *man/setSymbolLookup.Rd
 0228bad7cdd6f00eafc817d6dc8c2244 *man/setTA.Rd
 7186659e6c71850f2031d7693593d37d *man/specifyModel.Rd
 226bb886283249a1840aa3f5823bae6f *man/tradeModel.Rd
