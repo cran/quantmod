@@ -1,5 +1,5 @@
 00bbff4678cbb80cd0f11a327e337767 *CHANGES
-bcb0a91a3043a8d704f642ab85953a51 *DESCRIPTION
+b41e4a67d184346e46d356eafe3c98b2 *DESCRIPTION
 8c14e685bedeac9c25b5b0b783fcfcda *NAMESPACE
 3b267451bc179298cdb5ac77b3caeeb0 *R/Defaults.R
 fea30b0226f717064ccc77364ffa8c99 *R/OHLC.transformations.R
@@ -37,7 +37,7 @@ cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
 b4c7c78c7618f70a6d61108379a7bf70 *R/getDividends.R
 ca72e4fe607f117cced5ba897d391d76 *R/getFinancials.R
 b7d8972d888dbcbb8f7ddd463b286899 *R/getModelData.R
-4b219bba662f59899d94cc2ee509a4c3 *R/getOptionChain.R
+9fa7679de7ac22606b73eef1059a8862 *R/getOptionChain.R
 62997a4c001de02de36ed829e1552b54 *R/getQuote.R
 60f3d9dacd330e29832d1adee47fa632 *R/getSplits.R
 2eb4b2c1b932b991b627c7baa37243c2 *R/getSymbols.R
@@ -105,7 +105,7 @@ dffc24b805d53c3e11f0463d6f03716e *man/getModelData.Rd
 e70438ed0baae10e5589597b3c0d47f9 *man/getQuote.Rd
 c7ba5b64a1d1d62b9f8b7041562d218c *man/getSplits.Rd
 919989f6891144d1b4c1ae7d7f40bf21 *man/getSymbols.FRED.Rd
-703ef2dde3b016855c06295cccd55d78 *man/getSymbols.MySQL.Rd
+2d6f6759a1f10596bacd4d44cbf1f55a *man/getSymbols.MySQL.Rd
 eb8c63aea3d91e3fdd7c10c95135b750 *man/getSymbols.Rd
 998b8b7f9cd1f797ac6289e8981812ca *man/getSymbols.SQLite.Rd
 34d22d8f71afa6b804c5862186c5a2bc *man/getSymbols.csv.Rd
@@ -124,7 +124,7 @@ ec7ef567a8d637b5a35be5393cfbc70b *man/getSymbols.yahooj.Rd
 613eafafc8dbf5efff13ea525049dd9a *man/peak.Rd
 bc6581844a8666a1a3e21786dda9e1b8 *man/periodReturn.Rd
 1bc893d43208cf1329903928d6df751f *man/quantmod-class.Rd
-ad1e9395da80dd965afb1d4651bf707a *man/quantmod-package.Rd
+1e1c4aede3f3453aeb9f017cc202ab37 *man/quantmod-package.Rd
 f93d01b8ea2c1ff138f675e047a382ef *man/quantmod.OHLC.Rd
 b8c1ada5347961c4591f0be419ab4870 *man/saveChart.Rd
 5dad5e24a2ca3054c8084d06fc26576d *man/setSymbolLookup.Rd
