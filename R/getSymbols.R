@@ -234,7 +234,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
 
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-     yahoo.URL <- "http://ichart.finance.yahoo.com/table.csv?"
+     yahoo.URL <- "https://ichart.finance.yahoo.com/table.csv?"
 
      tmp <- tempfile()
      on.exit(unlink(tmp))
@@ -326,7 +326,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
         if(!requireNamespace("XML", quietly=TRUE))
           stop("package:",dQuote("XML"),"cannot be loaded.")
 
-        yahoo.URL <- "http://info.finance.yahoo.co.jp/history/"
+        yahoo.URL <- "https://info.finance.yahoo.co.jp/history/"
         for(i in 1:length(Symbols)) {
             # The name of the symbol, which will actually be used as the
             # variable name. It needs to start with YJ, and it will be appended
@@ -471,19 +471,40 @@ function(Symbols,env,return.class='xts',
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
+
+     default.return.class <- return.class
+     default.from <- from
+     default.to <- to
+
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
      google.URL <- "http://finance.google.com/finance/historical?"
-     from.y <- as.numeric(strsplit(as.character(from),'-',)[[1]][1])
-     from.m <- as.numeric(strsplit(as.character(from),'-',)[[1]][2])
-     from.d <- as.numeric(strsplit(as.character(from),'-',)[[1]][3])
-     to.y <- as.numeric(strsplit(as.character(to),'-',)[[1]][1])
-     to.m <- as.numeric(strsplit(as.character(to),'-',)[[1]][2])
-     to.d <- as.numeric(strsplit(as.character(to),'-',)[[1]][3])
+
+     # Google CSV contains English month abbreviations
+     # Ensure strptime() uses an English locale in this call
+     lc_time <- Sys.getlocale("LC_TIME")
+     on.exit(Sys.setlocale(category = "LC_TIME", locale = lc_time))
+     Sys.setlocale(category = "LC_TIME", locale = "C")
 
      tmp <- tempfile()
-     on.exit(unlink(tmp))
+     on.exit(unlink(tmp), add = TRUE)
+
      for(i in 1:length(Symbols)) {
+       return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
+       return.class <- ifelse(is.null(return.class),default.return.class,
+                              return.class)
+       from <- getSymbolLookup()[[Symbols[[i]]]]$from
+       from <- if(is.null(from)) default.from else from
+       to <- getSymbolLookup()[[Symbols[[i]]]]$to
+       to <- if(is.null(to)) default.to else to
+
+       from.y <- as.numeric(strsplit(as.character(from),'-',)[[1]][1])
+       from.m <- as.numeric(strsplit(as.character(from),'-',)[[1]][2])
+       from.d <- as.numeric(strsplit(as.character(from),'-',)[[1]][3])
+       to.y <- as.numeric(strsplit(as.character(to),'-',)[[1]][1])
+       to.m <- as.numeric(strsplit(as.character(to),'-',)[[1]][2])
+       to.d <- as.numeric(strsplit(as.character(to),'-',)[[1]][3])
+
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        if(verbose) cat("downloading ",Symbols.name,".....\n\n")
@@ -665,7 +686,7 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-     FRED.URL <- "https://research.stlouisfed.org/fred2/series"
+     FRED.URL <- "https://fred.stlouisfed.org/series"
 
      tmp <- tempfile()
      on.exit(unlink(tmp))
@@ -694,7 +715,7 @@ function(Symbols,env,return.class='xts',
 
 # getFX {{{
 `getFX` <-
-function(Currencies,from=Sys.Date()-499,to=Sys.Date(),
+function(Currencies,from=Sys.Date()-179,to=Sys.Date(),
          env=parent.frame(),
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
@@ -724,7 +745,7 @@ function(Currencies,from=Sys.Date()-499,to=Sys.Date(),
 
 # getMetals {{{
 `getMetals` <-
-function(Metals,from=Sys.Date()-500,to=Sys.Date(),
+function(Metals,from=Sys.Date()-179,to=Sys.Date(),
          base.currency="USD",env=parent.frame(),
          verbose=FALSE,warning=TRUE,
          auto.assign=TRUE,...) {
@@ -1019,9 +1040,12 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
 # getSymbols.oanda {{{
 `getSymbols.oanda` <-
 function(Symbols,env,return.class='xts',
-         from=Sys.Date()-499,
+         from=Sys.Date()-179,
          to=Sys.Date(),
          ...) {
+     if(!requireNamespace("jsonlite", quietly=TRUE))
+       stop("package:",dQuote("jsonlite"),"cannot be loaded.")
+
      importDefaults("getSymbols.oanda")
      this.env <- environment()
      for(var in names(list(...))) {
@@ -1037,10 +1061,6 @@ function(Symbols,env,return.class='xts',
 
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-
-     # Request minimum data from server to fulfill user's request
-     daySpans <- c(7, 30, 60, 90, 180, 364, 728, 1820)
-     dateStr <- c("d7", "d30", "d60", "d90", "d180", "y1", "y2", "y5")
 
      tmp <- tempfile()
      on.exit(unlink(tmp))
@@ -1064,34 +1084,37 @@ function(Symbols,env,return.class='xts',
        }
 
        if(verbose) cat("downloading ",Symbols.name,".....")
-       # Request minimum data from server to fulfill user's request
-       dateDiff <- difftime(to, from, units="days")
-       dateLoc <- which(daySpans >= dateDiff)
        # throw warning, but return as much data as possible
-       if(!length(dateLoc)) {
-           warning("Oanda limits data to 5years. Symbol: ", Symbols[[i]])
-           dateLoc <- length(dateStr)
+       if(from < Sys.Date() - 180) {
+           warning("Oanda only provides historical data for the past 180 days.",
+                   " Symbol: ", Symbols[[i]])
        }
-       data_range <- dateStr[dateLoc[1]]
-       oanda.URL <- paste("https://www.oanda.com/currency/historical-rates/download?",
-         "quote_currency=", currency.pair[1],
-         "&end_date=", to,
-         "&start_date=", from,
-         "&period=daily&display=absolute&rate=0",
-         "&data_range=", data_range,
-         "&price=mid&view=table",
-         "&base_currency_0=", currency.pair[2],
-         "&base_currency_1=&base_currency_2=&base_currency_3=&base_currency_4=&download=csv",
-         sep="")
-       download.file(oanda.URL, destfile=tmp, quiet=!verbose)
-       fr <- read.csv(tmp, skip=4, as.is=TRUE, header=TRUE)
-       fr[,1L] <- as.Date(fr[,1L], origin="1970-01-01")
-       fr <- na.omit(fr[,1:2])    # remove period mean/min/max from end of file
-       if(is.character(fr[,2L]))  # remove thousands seperator and convert
-         fr[,2L] <- as.numeric(gsub(",", "", fr[,2L], fixed=TRUE))
+       oanda.URL <- paste0("https://www.oanda.com/fx-for-business/",
+                           "historical-rates/api/update/?&widget=1",
+                           "&source=OANDA&display=absolute&adjustment=0",
+                           "&data_range=c",
+                           "&quote_currency=", currency.pair[1],
+                           "&start_date=", from,
+                           "&end_date=", to,
+                           "&period=daily",
+                           "&price=mid",
+                           "&view=table",
+                           "&base_currency_0=", currency.pair[2])
+       # Fetch data (jsonlite::fromJSON will handle connection)
+       tbl <- jsonlite::fromJSON(oanda.URL, simplifyVector = FALSE)
+       Data <- tbl[[1]][[1]]$data
+
+       # timestamps are ms since midnight 1970-01-01
+       secs <- as.numeric(sapply(Data, `[[`, 1L)) / 1000
+       dates <- as.Date(.POSIXct(secs, tz = "UTC"))
+
+       # remove thousands separator and convert to numeric
+       rates <- sapply(Data, `[[`, 2L)
+       if(is.character(rates))
+         rates <- as.numeric(gsub(",", "", rates))
 
        if(verbose) cat("done.\n")
-       fr <- xts(fr[,-1L], fr[,1L], src='oanda', updated=Sys.time())
+       fr <- xts(rates, dates, src="oanda", updated=Sys.time())
        fr <- fr[paste(from, to, sep="/")]  # subset to requested timespan
        colnames(fr) <- gsub("/",".",Symbols[[i]])
        fr <- convert.time.series(fr=fr,return.class=return.class)
@@ -1128,16 +1151,6 @@ function(Symbols,env,return.class='xts',
          fr <- as.data.frame(fr)
          return(fr)
        } else
-       if('its' %in% return.class) {
-         if(requireNamespace("its", quietly=TRUE)) {
-           fr.dates <- as.POSIXct(as.character(index(fr)))
-           fr <- its::its(coredata(fr),fr.dates)
-           return(fr)
-         } else {
-           warning(paste("'its' from package 'its' could not be loaded:",
-                         " 'xts' class returned"))
-         }
-       } else 
        if('timeSeries' %in% return.class) {
          if(requireNamespace("timeSeries", quietly=TRUE)) {
            fr <- timeSeries::timeSeries(coredata(fr), charvec=as.character(index(fr)))

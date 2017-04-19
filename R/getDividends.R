@@ -1,6 +1,6 @@
 `getDividends` <-
 function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
-         auto.assign=FALSE,auto.update=FALSE,verbose=FALSE,...) {
+         auto.assign=FALSE,auto.update=FALSE,verbose=FALSE,split.adjust=TRUE,...) {
 
   if(missing(env))
     env <- parent.frame(1)
@@ -10,7 +10,7 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
                         deparse(substitute(Symbol)),
                         as.character(Symbol))
 
-  yahoo.URL <- 'http://ichart.finance.yahoo.com/table.csv?s='
+  yahoo.URL <- 'https://ichart.finance.yahoo.com/table.csv?s='
   from.y <- as.numeric(strsplit(as.character(from), "-", )[[1]][1])
   from.m <- as.numeric(strsplit(as.character(from), "-", )[[1]][2])-1
   from.d <- as.numeric(strsplit(as.character(from), "-", )[[1]][3])
@@ -27,6 +27,16 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
             sep = ""), destfile = tmp, quiet = !verbose)
   fr <- read.csv(tmp)
   fr <- xts(fr[,2],as.Date(fr[,1]))
+  colnames(fr) <- paste(Symbol.name,'div',sep='.')
+
+  # dividends from Yahoo are split-adjusted; need to un-adjust
+  if(src[1] == "yahoo" && !split.adjust) {
+    splits <- getSplits(Symbol.name, from="1900-01-01")
+    if(is.xts(splits) && is.xts(fr) && nrow(splits) > 0 && nrow(fr) > 0) {
+      fr <- fr / adjRatios(splits=merge(splits, index(fr)))[,1]
+    }
+  }
+
   if(is.xts(Symbol)) {
     if(auto.update) {
       xtsAttributes(Symbol) <- list(dividends=fr)
