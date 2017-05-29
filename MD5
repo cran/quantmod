@@ -1,5 +1,5 @@
 00bbff4678cbb80cd0f11a327e337767 *CHANGES
-ddd01800fda145f001929d2d497c4280 *DESCRIPTION
+98c68b1468624563f2fbff16cdd0b746 *DESCRIPTION
 8c14e685bedeac9c25b5b0b783fcfcda *NAMESPACE
 3b267451bc179298cdb5ac77b3caeeb0 *R/Defaults.R
 fea30b0226f717064ccc77364ffa8c99 *R/OHLC.transformations.R
@@ -23,7 +23,7 @@ dd6c35740031d9202898eea236dbd6e1 *R/addVolatility.R
 ba032b32342f94c409775e032a6c8908 *R/addWPR.R
 e82fc436823a3ea3bb258832af7796d7 *R/addZigZag.R
 8103c6d0633a8991351393eec0da9b2e *R/add_Last.R
-6648ca26eb626227900229418a0314fa *R/adjustOHLC.R
+3dc3e38e7ee452559174e16c2256524f *R/adjustOHLC.R
 dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 4d838787166eed631b194708bd7c2030 *R/axTicksByTime2.R
 76afeb22c2c2c41bfdbc99f711329697 *R/buildModel.R
@@ -34,13 +34,13 @@ dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 e757dd1caa28cedbc8fd9663bb92bc34 *R/chob.R
 71b6499c3e1c0c431cdec0c90b513f74 *R/dropTA.R
 cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
-0e89df7b185fcdcbddfa0a6c798a9105 *R/getDividends.R
+7d2f9c187e30368365fedf429313da49 *R/getDividends.R
 ca72e4fe607f117cced5ba897d391d76 *R/getFinancials.R
 b7d8972d888dbcbb8f7ddd463b286899 *R/getModelData.R
-9fa7679de7ac22606b73eef1059a8862 *R/getOptionChain.R
+b490d880080777780ab9cab56c4c7183 *R/getOptionChain.R
 b5a4bcf07f00583334609f5110d6ec88 *R/getQuote.R
-22d61511caf2c4c94d6ac1947ec22563 *R/getSplits.R
-5e28e95db758be223f761dfad208939d *R/getSymbols.R
+afd6f0235f5b070ed34314c522416d91 *R/getSplits.R
+b7b5873211453bcb7fd0eeb730fe5400 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
 ce5eaff302ecf73b9767a2f8446f9ae8 *R/loadSymbols.R
 d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
@@ -112,7 +112,7 @@ c7ba5b64a1d1d62b9f8b7041562d218c *man/getSplits.Rd
 8955bea8aa3c95913a246068c4e97cc2 *man/getSymbols.google.Rd
 b85b224c5b75520cfc75caa002d42038 *man/getSymbols.oanda.Rd
 dbfd3a6b8beda5133ba2ad6edaa1100c *man/getSymbols.rda.Rd
-8d6d17fec06412cf7c556543952ea237 *man/getSymbols.yahoo.Rd
+c86a7c4bfcc0a685e171e634533e0019 *man/getSymbols.yahoo.Rd
 49ca554360dd644d7650b200164e4b15 *man/getSymbols.yahooj.Rd
 933e9464ab25462138de27d949ebb0e1 *man/has.Rd
 800667ddc676ca850ea3777f2bf6c7af *man/internal-quantmod.Rd

@@ -12,30 +12,24 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
                         deparse(substitute(Symbol)),
                         as.character(Symbol))
 
-  yahoo.URL <- 'https://ichart.finance.yahoo.com/x?s='
-  from.y <- as.numeric(strsplit(as.character(from), "-", )[[1]][1])
-  from.m <- as.numeric(strsplit(as.character(from), "-", )[[1]][2])-1
-  from.d <- as.numeric(strsplit(as.character(from), "-", )[[1]][3])
-  to.y <- as.numeric(strsplit(as.character(to), "-", )[[1]][1])
-  to.m <- as.numeric(strsplit(as.character(to), "-", )[[1]][2])-1
-  to.d <- as.numeric(strsplit(as.character(to), "-", )[[1]][3])
+  from.posix <- .dateToUNIX(from)
+  to.posix <- .dateToUNIX(to)
 
   tmp <- tempfile()
   on.exit(unlink(tmp))
-  download.file(paste(yahoo.URL,Symbol.name, "&a=", 
-            from.m, "&b=", sprintf("%.2d", from.d), "&c=", from.y, 
-            "&d=", to.m, "&e=", sprintf("%.2d", to.d), "&f=", 
-            to.y, "&g=v&y=0&z=30000", 
-            sep = ""), destfile = tmp, quiet = !verbose)
-  fr <- read.table(tmp, skip=1, fill=TRUE, as.is=TRUE, sep=",")
-  fr <- fr[fr$V1=="SPLIT",]
+
+  handle <- .getHandle()
+  yahoo.URL <- .yahooURL(Symbol.name, from.posix, to.posix,
+                         "1d", "split", handle)
+  curl::curl_download(yahoo.URL, destfile=tmp, quiet=!verbose, handle=handle$ch)
+
+  fr <- read.csv(tmp, as.is=TRUE)
 
   if(NROW(fr)==0) {
     fr <- NA
   } else {
-    fr$V3 <- sub(":","/", fr$V3)
-    fr$V3 <- 1 / sapply( parse( text=fr$V3 ), eval )
-    fr <- xts(fr$V3, as.Date(as.character(fr$V2),"%Y%m%d"))
+    fr$V3 <- 1 / sapply(parse(text=fr[,2]), eval)
+    fr <- xts(fr$V3, as.Date(fr[,1], "%Y-%m-%d"))
     colnames(fr) <- paste(Symbol.name,'spl',sep='.')
   }
 

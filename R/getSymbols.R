@@ -12,16 +12,14 @@ function(Symbols=NULL,
          ...)  {
       if(getOption("getSymbols.warning4.0",TRUE)) {
         # transition message for 0.4-0 to 0.5-0
-        message(paste(
-                '    As of 0.4-0,',sQuote('getSymbols'),'uses env=parent.frame() and\n',
-                'auto.assign=TRUE by default.\n\n',
-
-                'This  behavior  will be  phased out in 0.5-0  when the call  will\n',
-                'default to use auto.assign=FALSE. getOption("getSymbols.env") and \n',
-                'getOptions("getSymbols.auto.assign") are now checked for alternate defaults\n\n',
+        message(sQuote('getSymbols'), ' currently uses auto.assign=TRUE by default, but will\n',
+                'use auto.assign=FALSE in 0.5-0. You will still be able to use\n',
+                sQuote('loadSymbols'), ' to automatically load data. getOption("getSymbols.env")\n',
+                'and getOption("getSymbols.auto.assign") will still be checked for\n',
+                'alternate defaults.\n\n',
                 'This message is shown once per session and may be disabled by setting \n',
-                'options("getSymbols.warning4.0"=FALSE). See ?getSymbols for more details.'))
-        options("getSymbols.warning4.0"=FALSE) 
+                'options("getSymbols.warning4.0"=FALSE). See ?getSymbols for details.')
+        options("getSymbols.warning4.0"=FALSE)
       }
       importDefaults("getSymbols")
       #  to enable as-it-was behavior, set this:
@@ -212,13 +210,80 @@ formals(loadSymbols) <- loadSymbols.formals
 #"getSymbols.Bloomberg" <- getSymbols.Bloomberg
 # }}}
 
+.getHandle <- function(force.new = FALSE)
+{
+  h <- get0("_handle_", .quantmodEnv)
+
+  if (is.null(h) || force.new) {
+    # create 'h' if it doesn't exist yet
+    if (!force.new) {
+      h <- list()
+    }
+
+    # establish session
+    new.session <- function(h) {
+      tmp <- tempfile()
+      on.exit(unlink(tmp))
+
+      for (i in 1:5) {
+        curl::curl_download("https://finance.yahoo.com", tmp, handle = h)
+        if (NROW(curl::handle_cookies(h)) > 0)
+          break;
+      }
+
+      if (NROW(curl::handle_cookies(h)) == 0)
+        stop("Could not establish session after 5 attempts.")
+
+      return(h)
+    }
+
+    h$ch <- new.session(curl::new_handle())
+
+    n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
+    query.srv <- paste0("https://query", n, ".finance.yahoo.com/",
+                        "v1/test/getcrumb")
+    cres <- curl::curl_fetch_memory(query.srv, handle = h$ch)
+
+    h$cb <- rawToChar(cres$content)
+    assign("_handle_", h, .quantmodEnv)
+  }
+  return(h)
+}
+
+.yahooURL <-
+function(symbol, from, to, period, type, handle)
+{
+  p <- match.arg(period, c("1d", "1wk", "1mo"))
+  e <- match.arg(type, c("history", "div", "split"))
+  n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
+  u <- paste0("https://query", n, ".finance.yahoo.com/v7/finance/download/",
+              symbol, "?period1=", from, "&period2=", to, "&interval=", p,
+              "&events=", e, "&crumb=", handle$cb)
+  return(u)
+}
+
+.dateToUNIX <- function(Date) {
+  posixct <- as.POSIXct(as.Date(Date, origin = "1970-01-01"))
+  trunc(as.numeric(posixct))
+}
+
 # getSymbols.yahoo {{{
 "getSymbols.yahoo" <-
 function(Symbols,env,return.class='xts',index.class="Date",
          from='2007-01-01',
          to=Sys.Date(),
-         ...)
+         ...,
+         periodicity="daily")
 {
+     if(getOption("getSymbols.yahoo.warning",TRUE)) {
+       # Warn about Yahoo Finance quality and stability
+       message("\nWARNING: There have been significant changes to Yahoo Finance data.",
+               "\nPlease see the Warning section of ", sQuote("?getSymbols.yahoo"), " for details.\n",
+               "\nThis message is shown once per session and may be disabled by setting\n",
+               "options(\"getSymbols.yahoo.warning\"=FALSE).")
+       options("getSymbols.yahoo.warning"=FALSE)
+     }
+
      importDefaults("getSymbols.yahoo")
      this.env <- environment()
      for(var in names(list(...))) {
@@ -232,54 +297,94 @@ function(Symbols,env,return.class='xts',index.class="Date",
      default.from <- from
      default.to <- to
 
+     intervals <- c(daily = "1d", weekly = "1wk", monthly = "1mo")
+     default.periodicity <- match.arg(periodicity, names(intervals))
+
      if(!hasArg(verbose)) verbose <- FALSE
      if(!hasArg(auto.assign)) auto.assign <- TRUE
-     yahoo.URL <- "https://ichart.finance.yahoo.com/table.csv?"
+
+     handle <- .getHandle()
 
      tmp <- tempfile()
      on.exit(unlink(tmp))
+
      for(i in 1:length(Symbols)) {
        return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
        return.class <- ifelse(is.null(return.class),default.return.class,
                               return.class)
+       periodicity <- getSymbolLookup()[[Symbols[[i]]]]$periodicity
+       periodicity <- if(is.null(periodicity)) default.periodicity else periodicity
+
+       # ensure valid periodicity
+       p <- pmatch(periodicity, names(intervals))
+       if(is.na(p))
+         stop("periodicity must be one of: ", paste(intervals, collapse=", "))
+       interval <- intervals[p]
+
        from <- getSymbolLookup()[[Symbols[[i]]]]$from
        from <- if(is.null(from)) default.from else from
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- if(is.null(to)) default.to else to
-   
-       from.y <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][1])
-       from.m <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][2])-1
-       from.d <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][3])
-       to.y <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][1])
-       to.m <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][2])-1
-       to.d <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][3])
-       
+
+       from.posix <- .dateToUNIX(from)
+       to.posix <- .dateToUNIX(to)
+
        Symbols.name <- getSymbolLookup()[[Symbols[[i]]]]$name
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        if(verbose) cat("downloading ",Symbols.name,".....\n\n")
-       download.file(paste(yahoo.URL,
-                           "s=",Symbols.name,
-                           "&a=",from.m,
-                           "&b=",sprintf('%.2d',from.d),
-                           "&c=",from.y,
-                           "&d=",to.m,
-                           "&e=",sprintf('%.2d',to.d),
-                           "&f=",to.y,
-                           "&g=d&q=q&y=0",
-                           "&z=",Symbols.name,"&x=.csv",
-                           sep=''),destfile=tmp,quiet=!verbose)
-       fr <- read.csv(tmp)
+
+       yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
+                              interval, "history", handle)
+       dl <- try(curl::curl_download(yahoo.URL, destfile = tmp,
+                                     quiet = !verbose, handle = handle$ch),
+                  silent = TRUE)
+
+       if (inherits(dl, "try-error")) {
+         # warn user about the failure
+         warning(Symbols.name, " download failed; trying again.",
+                 call. = FALSE, immediate. = TRUE)
+         # re-create handle
+         handle <- .getHandle(force.new = TRUE)
+         # try again
+         yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
+                                interval, "history", handle)
+         dl <- try(curl::curl_download(yahoo.URL, destfile = tmp,
+                                       quiet = !verbose, handle = handle$ch),
+                    silent = TRUE)
+         # error if second attempt also failed
+         if (inherits(dl, "try-error")) {
+           stop(Symbols.name, " download failed after two attempts. Error",
+                " message:\n", attr(dl, "condition")$message, call. = FALSE)
+         }
+       }
+
+       fr <- read.csv(tmp, na.strings="null")
        if(verbose) cat("done.\n")
        fr <- xts(as.matrix(fr[,-1]),
                  as.Date(fr[,1]),
                  #as.POSIXct(fr[,1], tz=Sys.getenv("TZ")),
                  src='yahoo',updated=Sys.time())
-       colnames(fr) <- paste(toupper(gsub('\\^','',Symbols.name)),
-                             c('Open','High','Low','Close','Volume','Adjusted'),
-                             sep='.')
+
+       # warn about missing values
+       if (any(is.na(fr))) {
+         warning(Symbols.name, " contains missing values. Some functions will",
+                 " not work if objects contain missing values in the middle",
+                 " of the series. Consider using na.omit(), na.approx(),",
+                 " na.fill(), etc to remove or replace them.", call. = FALSE)
+       }
+
+       # re-order column names and prefix with symbol
+       cnames <- c("Open", "High", "Low", "Close", "Volume", "Adjusted")
+       corder <- pmatch(substr(cnames, 1, 3), colnames(fr))
+       fr <- fr[,corder]
+       colnames(fr) <- paste(toupper(gsub("\\^","",Symbols.name)), cnames, sep=".")
+
        if(adjust) {
-         # Adjustment algorithm by Joshua Ulrich
-         fr <- adjustOHLC(fr, symbol.name=Symbols.name)
+         # Already adjusted, except for the Close column
+         fr[,4] <- Ad(fr)
+       } else {
+         # Un-adjust the Close, using Adjusted column
+         fr[,1:3] <- round(fr[,1:3] * drop(fr[,4] / fr[,6]), 3)
        }
 
        fr <- convert.time.series(fr=fr,return.class=return.class)

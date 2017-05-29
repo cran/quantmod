@@ -19,7 +19,8 @@ getSymbols.yahoo(Symbols,
                  index.class  = 'Date',
                  from = "2007-01-01",
                  to = Sys.Date(),
-                  ...)
+                 ...,
+                 periodicity = "daily")
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -32,6 +33,8 @@ getSymbols.yahoo(Symbols,
                     (2007-01-01)}
        \item{to}{ Retrieve data through this date (Sys.Date())}
        \item{\dots}{ additional parameters }
+       \item{periodicity}{ periodicity of data to query and return. Must be
+                           one of "daily", "weekly", "monthly". ("daily") }
 }
 \details{
 Meant to be called internally by \code{getSymbols} (see also).
@@ -40,6 +43,17 @@ One of a few currently defined methods for loading
 data for use with \pkg{quantmod}.  Essentially a
 simple wrapper to the underlying Yahoo! finance site's
 historical data download.
+}
+\section{Warning}{
+As of quantmod 0.4-9, \code{getSymbols.yahoo} has been patched to
+work with changes to Yahoo Finance, which also included the following
+changes to the raw data:
+  \itemize{
+    \item The adjusted close column appears to no longer include dividend adjustments
+    \item The close column appears to be adjusted for splits twice
+    \item The open, high, and low columns are adjusted for splits, and
+    \item The raw data may contain missing values.
+  }
 }
 \value{
 A call to getSymbols.yahoo will load into the specified
