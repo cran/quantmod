@@ -1,7 +1,7 @@
 00bbff4678cbb80cd0f11a327e337767 *CHANGES
-98c68b1468624563f2fbff16cdd0b746 *DESCRIPTION
+b0e2b77a9117b8105d76f1bcf9fa4c51 *DESCRIPTION
 8c14e685bedeac9c25b5b0b783fcfcda *NAMESPACE
-3b267451bc179298cdb5ac77b3caeeb0 *R/Defaults.R
+3a7e2e323d1519f1c19cdc041d1025d6 *R/Defaults.R
 fea30b0226f717064ccc77364ffa8c99 *R/OHLC.transformations.R
 3eb6c31d57d927394ac1732823b7e519 *R/Price.transformations.R
 09a54ce40bdb58e7a9f441568ea9b22e *R/SymbolLookup.R
@@ -23,7 +23,7 @@ dd6c35740031d9202898eea236dbd6e1 *R/addVolatility.R
 ba032b32342f94c409775e032a6c8908 *R/addWPR.R
 e82fc436823a3ea3bb258832af7796d7 *R/addZigZag.R
 8103c6d0633a8991351393eec0da9b2e *R/add_Last.R
-3dc3e38e7ee452559174e16c2256524f *R/adjustOHLC.R
+6648ca26eb626227900229418a0314fa *R/adjustOHLC.R
 dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 4d838787166eed631b194708bd7c2030 *R/axTicksByTime2.R
 76afeb22c2c2c41bfdbc99f711329697 *R/buildModel.R
@@ -34,13 +34,13 @@ dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 e757dd1caa28cedbc8fd9663bb92bc34 *R/chob.R
 71b6499c3e1c0c431cdec0c90b513f74 *R/dropTA.R
 cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
-7d2f9c187e30368365fedf429313da49 *R/getDividends.R
+b4576be3b9f33631248741eeed935524 *R/getDividends.R
 ca72e4fe607f117cced5ba897d391d76 *R/getFinancials.R
 b7d8972d888dbcbb8f7ddd463b286899 *R/getModelData.R
 b490d880080777780ab9cab56c4c7183 *R/getOptionChain.R
 b5a4bcf07f00583334609f5110d6ec88 *R/getQuote.R
 afd6f0235f5b070ed34314c522416d91 *R/getSplits.R
-b7b5873211453bcb7fd0eeb730fe5400 *R/getSymbols.R
+b9efd88cd210eef4e0ac7b2432f96de3 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
 ce5eaff302ecf73b9767a2f8446f9ae8 *R/loadSymbols.R
 d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
@@ -51,7 +51,7 @@ d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
 595c883e5d16f93e1860b87c1eaf40dd *R/oanda.R
 0c6223637c9f9dafd8062b0d64fab5cf *R/peak.R
 42f58b4fe5beccf02342b6d0a94a03cc *R/periodReturn.R
-8abe7fe3478f93ca6f070fe19f7174ba *R/quantmod.R
+2b06fe699b515903cdce4d6ff23b1bed *R/quantmod.R
 1bf60d7a1c8749c59c3119614437c8cb *R/reChart.R
 f77a10724737bd71b34169fafad789c7 *R/replot.R
 d22629cb2177d29835945d9a7c928fb3 *R/returnBy.R
@@ -85,7 +85,7 @@ f06804c103a7259ac7cdffedd58681d8 *man/addMACD.Rd
 0af96ff507f76691e88b930f6219c12c *man/addSMI.Rd
 714d9f2da688f5d8ae5dfef9ac14c74e *man/addVo.Rd
 f717b7b281b8b6b413baf504802a0979 *man/addWPR.Rd
-93a0f37e3a79e44bcdfe9b23147bbe1b *man/adjustOHLC.Rd
+b840a3bc687012b07275941f3af20eb3 *man/adjustOHLC.Rd
 521909d7cc06f40ffe09f5dfa47adcb4 *man/attachSymbols.Rd
 208cfabf1b73107d19452c9b39fb39ab *man/buildData.Rd
 0b95c00314f7ca1fd72db99a96036318 *man/buildModel.Rd
@@ -124,7 +124,7 @@ c86a7c4bfcc0a685e171e634533e0019 *man/getSymbols.yahoo.Rd
 613eafafc8dbf5efff13ea525049dd9a *man/peak.Rd
 bc6581844a8666a1a3e21786dda9e1b8 *man/periodReturn.Rd
 1bc893d43208cf1329903928d6df751f *man/quantmod-class.Rd
-b9a11f9b07168cc88bf5acd2182d25b4 *man/quantmod-package.Rd
+2cbae465a882c36bd21fe88353eef238 *man/quantmod-package.Rd
 f93d01b8ea2c1ff138f675e047a382ef *man/quantmod.OHLC.Rd
 b8c1ada5347961c4591f0be419ab4870 *man/saveChart.Rd
 5dad5e24a2ca3054c8084d06fc26576d *man/setSymbolLookup.Rd
@@ -132,3 +132,4 @@ b8c1ada5347961c4591f0be419ab4870 *man/saveChart.Rd
 ddc4f0fe52165f427bff3a65c7b279c5 *man/specifyModel.Rd
 226bb886283249a1840aa3f5823bae6f *man/tradeModel.Rd
 ba287ea419bb17e7fe24fb33de89ef92 *man/zoomChart.Rd
+8688189f5f403e775f9db4629848bbfc *tests/tests.R

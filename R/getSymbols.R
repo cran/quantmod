@@ -221,14 +221,19 @@ formals(loadSymbols) <- loadSymbols.formals
     }
 
     # establish session
-    new.session <- function(h) {
+    new.session <- function() {
       tmp <- tempfile()
       on.exit(unlink(tmp))
 
       for (i in 1:5) {
-        curl::curl_download("https://finance.yahoo.com", tmp, handle = h)
+        h <- curl::new_handle()
+        # random query to avoid cache
+        ru <- paste(sample(c(letters, 0:9), 4), collapse = "")
+        cu <- paste0("https://finance.yahoo.com?", ru)
+        curl::curl_download(cu, tmp, handle = h)
         if (NROW(curl::handle_cookies(h)) > 0)
           break;
+        Sys.sleep(0.1)
       }
 
       if (NROW(curl::handle_cookies(h)) == 0)
@@ -237,7 +242,7 @@ formals(loadSymbols) <- loadSymbols.formals
       return(h)
     }
 
-    h$ch <- new.session(curl::new_handle())
+    h$ch <- new.session()
 
     n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
     query.srv <- paste0("https://query", n, ".finance.yahoo.com/",
