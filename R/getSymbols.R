@@ -210,7 +210,7 @@ formals(loadSymbols) <- loadSymbols.formals
 #"getSymbols.Bloomberg" <- getSymbols.Bloomberg
 # }}}
 
-.getHandle <- function(force.new = FALSE)
+.getHandle <- function(curl.options = list(), force.new = FALSE)
 {
   h <- get0("_handle_", .quantmodEnv)
 
@@ -227,6 +227,8 @@ formals(loadSymbols) <- loadSymbols.formals
 
       for (i in 1:5) {
         h <- curl::new_handle()
+        curl::handle_setopt(h, .list = curl.options)
+
         # random query to avoid cache
         ru <- paste(sample(c(letters, 0:9), 4), collapse = "")
         cu <- paste0("https://finance.yahoo.com?", ru)
@@ -278,7 +280,8 @@ function(Symbols,env,return.class='xts',index.class="Date",
          from='2007-01-01',
          to=Sys.Date(),
          ...,
-         periodicity="daily")
+         periodicity="daily",
+         curl.options=list())
 {
      if(getOption("getSymbols.yahoo.warning",TRUE)) {
        # Warn about Yahoo Finance quality and stability
@@ -295,7 +298,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
-     if(!hasArg(adjust))
+     if(!hasArg("adjust"))
        adjust <- FALSE
 
      default.return.class <- return.class
@@ -305,10 +308,10 @@ function(Symbols,env,return.class='xts',index.class="Date",
      intervals <- c(daily = "1d", weekly = "1wk", monthly = "1mo")
      default.periodicity <- match.arg(periodicity, names(intervals))
 
-     if(!hasArg(verbose)) verbose <- FALSE
-     if(!hasArg(auto.assign)) auto.assign <- TRUE
+     if(!hasArg("verbose")) verbose <- FALSE
+     if(!hasArg("auto.assign")) auto.assign <- TRUE
 
-     handle <- .getHandle()
+     handle <- .getHandle(curl.options)
 
      tmp <- tempfile()
      on.exit(unlink(tmp))
@@ -349,7 +352,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
          warning(Symbols.name, " download failed; trying again.",
                  call. = FALSE, immediate. = TRUE)
          # re-create handle
-         handle <- .getHandle(force.new = TRUE)
+         handle <- .getHandle(curl.options, force.new = TRUE)
          # try again
          yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
                                 interval, "history", handle)
@@ -385,11 +388,8 @@ function(Symbols,env,return.class='xts',index.class="Date",
        colnames(fr) <- paste(toupper(gsub("\\^","",Symbols.name)), cnames, sep=".")
 
        if(adjust) {
-         # Already adjusted, except for the Close column
-         fr[,4] <- Ad(fr)
-       } else {
-         # Un-adjust the Close, using Adjusted column
-         fr[,1:3] <- round(fr[,1:3] * drop(fr[,4] / fr[,6]), 3)
+         # Adjustment algorithm by Joshua Ulrich
+         fr <- adjustOHLC(fr, symbol.name=Symbols.name)
        }
 
        fr <- convert.time.series(fr=fr,return.class=return.class)
@@ -423,15 +423,15 @@ function(Symbols,env,return.class='xts',index.class="Date",
             # import all named elements that are NON formals
             assign(var, list(...)[[var]], this.env)
         }
-        if(!hasArg(adjust))
+        if(!hasArg("adjust"))
             adjust <- FALSE
         
         default.return.class <- return.class
         default.from <- from
         default.to <- to
         
-        if(!hasArg(verbose)) verbose <- FALSE
-        if(!hasArg(auto.assign)) auto.assign <- TRUE
+        if(!hasArg("verbose")) verbose <- FALSE
+        if(!hasArg("auto.assign")) auto.assign <- TRUE
 
         if(!requireNamespace("XML", quietly=TRUE))
           stop("package:",dQuote("XML"),"cannot be loaded.")
@@ -586,8 +586,8 @@ function(Symbols,env,return.class='xts',
      default.from <- from
      default.to <- to
 
-     if(!hasArg(verbose)) verbose <- FALSE
-     if(!hasArg(auto.assign)) auto.assign <- TRUE
+     if(!hasArg("verbose")) verbose <- FALSE
+     if(!hasArg("auto.assign")) auto.assign <- TRUE
      google.URL <- "http://finance.google.com/finance/historical?"
 
      # Google CSV contains English month abbreviations
@@ -673,8 +673,8 @@ function(Symbols,env,return.class='xts',
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
-     if(!hasArg(verbose)) verbose <- FALSE
-     if(!hasArg(auto.assign)) auto.assign <- TRUE
+     if(!hasArg("verbose")) verbose <- FALSE
+     if(!hasArg("auto.assign")) auto.assign <- TRUE
 
      if(!requireNamespace("DBI", quietly=TRUE))
        stop("package:",dQuote("DBI"),"cannot be loaded.")
@@ -737,8 +737,8 @@ function(Symbols,env,return.class='xts',
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
-     if(!hasArg(verbose)) verbose <- FALSE
-     if(!hasArg(auto.assign)) auto.assign <- TRUE
+     if(!hasArg("verbose")) verbose <- FALSE
+     if(!hasArg("auto.assign")) auto.assign <- TRUE
 
      if(!requireNamespace("DBI", quietly=TRUE))
        stop("package:",dQuote("DBI"),"cannot be loaded.")
@@ -794,8 +794,8 @@ function(Symbols,env,return.class='xts',
         # import all named elements that are NON formals
         assign(var, list(...)[[var]], this.env)
      }
-     if(!hasArg(verbose)) verbose <- FALSE
-     if(!hasArg(auto.assign)) auto.assign <- TRUE
+     if(!hasArg("verbose")) verbose <- FALSE
+     if(!hasArg("auto.assign")) auto.assign <- TRUE
      FRED.URL <- "https://fred.stlouisfed.org/series"
 
      tmp <- tempfile()
@@ -900,8 +900,8 @@ function(Symbols,env,
   default.dir <- dir
   default.extension <- extension
 
-  if(!hasArg(verbose)) verbose <- FALSE
-  if(!hasArg(auto.assign)) auto.assign <- TRUE
+  if(!hasArg("verbose")) verbose <- FALSE
+  if(!hasArg("auto.assign")) auto.assign <- TRUE
 
   for(i in 1:length(Symbols)) {
     return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -969,8 +969,8 @@ function(Symbols,env,
   default.dir <- dir
   default.extension <- extension
 
-  if(!hasArg(verbose)) verbose <- FALSE
-  if(!hasArg(auto.assign)) auto.assign <- TRUE
+  if(!hasArg("verbose")) verbose <- FALSE
+  if(!hasArg("auto.assign")) auto.assign <- TRUE
 
   for(i in 1:length(Symbols)) {
     return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -1028,8 +1028,8 @@ function(Symbols,env,
   default.dir <- dir
   default.extension <- extension
 
-  if(!hasArg(verbose)) verbose <- FALSE
-  if(!hasArg(auto.assign)) auto.assign <- TRUE
+  if(!hasArg("verbose")) verbose <- FALSE
+  if(!hasArg("auto.assign")) auto.assign <- TRUE
 
   for(i in 1:length(Symbols)) {
     return.class <- getSymbolLookup()[[Symbols[[i]]]]$return.class
@@ -1084,9 +1084,9 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
   for(var in names(list(...))) {
     assign(var, list(...)[[var]], this.env)
   }
-  if(!hasArg(verbose))
+  if(!hasArg("verbose"))
     verbose <- FALSE
-  if(!hasArg(auto.assign))
+  if(!hasArg("auto.assign"))
     auto.assign <- TRUE
   if(is.method.available("twsConnect","IBrokers")) {
     tws <- do.call('twsConnect',list(clientId=1001))
@@ -1169,8 +1169,8 @@ function(Symbols,env,return.class='xts',
      default.from <- from
      default.to <- to
 
-     if(!hasArg(verbose)) verbose <- FALSE
-     if(!hasArg(auto.assign)) auto.assign <- TRUE
+     if(!hasArg("verbose")) verbose <- FALSE
+     if(!hasArg("auto.assign")) auto.assign <- TRUE
 
      tmp <- tempfile()
      on.exit(unlink(tmp))
@@ -1236,6 +1236,197 @@ function(Symbols,env,return.class='xts',
        return(Symbols)
      return(fr)
 }#}}}
+
+#
+#  Download OHLC Data From Alpha Vantage
+#  
+#  Meant to be called internally by getSymbols().
+#  
+getSymbols.av <- function(Symbols, env, api.key,
+                          return.class="xts",
+                          periodicity="daily",
+                          adjusted=FALSE,
+                          interval="1min",
+                          output.size="compact",
+                          data.type="json",
+                          ...)
+{
+  importDefaults("getSymbols.av")
+  this.env <- environment()
+  for (var in names(list(...))) {
+    assign(var, list(...)[[var]], this.env)
+  }
+  
+  if (!hasArg("api.key")) {
+    stop("getSymbols.av: An API key is required (api.key). Free registration",
+         " at https://www.alphavantage.co/.", call.=FALSE)
+  }
+  if (!hasArg("auto.assign")) auto.assign <- TRUE
+  if (!hasArg("verbose")) verbose <- FALSE
+  if (!hasArg("warnings")) warnings <- TRUE
+  
+  valid.periodicity <- c("daily", "weekly", "monthly", "intraday")
+  periodicity <- match.arg(periodicity, valid.periodicity)
+  interval <- match.arg(interval, c("1min", "5min", "15min", "30min", "60min"))
+  output.size <- match.arg(output.size, c("compact", "full"))
+  
+  default.return.class <- return.class
+  default.periodicity <- periodicity
+  
+  if (!requireNamespace("jsonlite", quietly=TRUE)) {
+    stop("getSymbols.av: Package", dQuote("jsonlite"), "is required but",
+         " cannot be loaded.", call.=FALSE)
+  }
+  
+  tmp <- tempfile()
+  on.exit(file.remove(tmp))
+  
+  #
+  # For daily, weekly, and monthly data, timestamps are "yyyy-mm-dd".
+  # For intraday data, timestamps are "yyyy-mm-dd HH:MM:SS".
+  #
+  convertTimestamps <- function(ts, periodicity, tz) {
+    if (periodicity == "intraday")
+      as.POSIXct(ts, tz=tz)
+    else
+      as.Date(ts)
+  }
+  
+  downloadOne <- function(sym, default.return.class, default.periodicity) {
+    
+    return.class <- getSymbolLookup()[[sym]]$return.class
+    return.class <- if (is.null(return.class)) default.return.class else return.class
+    
+    periodicity <- getSymbolLookup()[[sym]]$periodicity
+    periodicity <- if (is.null(periodicity)) default.periodicity else periodicity
+    periodicity <- match.arg(periodicity, valid.periodicity)
+    
+    if (adjusted && periodicity != "daily")
+      stop("getSymbols.av: Only daily data can be adjusted.", call.=FALSE)
+    
+    sym.name <- getSymbolLookup()[[sym]]$name
+    sym.name <- if (is.null(sym.name)) sym else sym.name
+    
+    FUNCTION <-
+      switch(periodicity,
+             daily = if (adjusted) "TIME_SERIES_DAILY_ADJUSTED" else "TIME_SERIES_DAILY",
+             weekly = "TIME_SERIES_WEEKLY",
+             monthly = "TIME_SERIES_MONTHLY",
+             intraday = "TIME_SERIES_INTRADAY" )
+    
+    if (verbose) cat("loading", sym.name, ".....")
+    
+    URL <- paste0("http://www.alphavantage.co/query",
+                  "?function=", FUNCTION,
+                  "&symbol=", sym.name,
+                  "&interval=", interval,
+                  "&outputsize=", output.size,
+                  "&datatype=", data.type,
+                  "&apikey=", api.key)
+    
+    download.file(url=URL, destfile=tmp, quiet=!verbose)
+
+    if (data.type == "json") {
+      lst <- jsonlite::fromJSON(tmp)
+
+      #
+      # Errors return a list with one element: An error message
+      #
+      if (length(lst) == 1)
+        stop("getSymbols.av: ", lst[[1]], call.=FALSE)
+
+      if (verbose) cat("done.\n")
+
+      #
+      # The first element of 'lst' is the metadata.
+      # Typical metadata (in JSON format):
+      #
+      #   "Meta Data": {
+      #     "1. Information": "Intraday (1min) prices and volumes",
+      #     "2. Symbol": "MSFT",
+      #     "3. Last Refreshed": "2017-05-23 16:00:00",
+      #     "4. Interval": "1min",
+      #     "5. Output Size": "Compact",
+      #     "6. Time Zone": "US/Eastern"
+      #   }
+      #
+      meta <- lst[[1]]
+      tz <- meta[["6. Time Zone"]]
+      updated <- convertTimestamps(meta[["3. Last Refreshed"]], periodicity, tz=tz)
+
+      #
+      # The second element of 'lst' is the data: a list.
+      # The names of the list elements are the timestamps.
+      # Typical list element, non-adjusted data (in JSON format):
+      #
+      #   "2017-05-23": {
+      #     "1. open": "68.6750",
+      #     "2. high": "68.7100",
+      #     "3. low": "68.6400",
+      #     "4. close": "68.6800",
+      #     "5. volume": "1591941"
+      #   }
+      #
+      # Typical list element, adjusted data (again, JSON format):
+      #
+      #  "2017-06-30": {
+      #    "1. open": "68.7800",
+      #    "2. high": "69.3800",
+      #    "3. low": "68.7400",
+      #    "4. close": "68.9300",
+      #    "5. adjusted close": "68.9300",
+      #    "6. volume": "23039328",
+      #    "7. dividend amount": "0.00",
+      #    "8. split coefficient": "1.0000"
+      #   },
+      #
+      elems <- lst[[2]]
+      tm.stamps <- convertTimestamps(names(elems), periodicity, tz=tz)
+
+      if (adjusted) {
+        av_names <- c("1. open", "2. high", "3. low", "4. close", "6. volume", "5. adjusted close")
+        qm_names <- paste(sym, c("Open", "High", "Low", "Close", "Volume", "Adjusted"), sep=".")
+      } else {
+        av_names <- c("1. open", "2. high", "3. low", "4. close", "5. volume")
+        qm_names <- paste(sym, c("Open", "High", "Low", "Close", "Volume"), sep=".")
+      }
+
+      # extract columns from each element (row) and unlist to a vector
+      rows <- lapply(elems, function(x) unlist(x[av_names], use.names=FALSE))
+      rows <- do.call(rbind, rows)
+      colnames(rows) <- qm_names
+      storage.mode(rows) <- "numeric"
+      # convert matrix to xts
+      mat <- xts(rows, tm.stamps, src="alphavantage", updated=updated)
+      mat <- convert.time.series(mat, return.class=return.class)
+    } else {
+      mat <- as.xts(read.zoo(tmp, header=TRUE, sep=","),
+                    src="alphavantage", updated=Sys.time())
+      # convert column names to symbol.series
+      cn <- colnames(mat)
+      cn <- paste0(toupper(substring(cn, 1, 1)), substring(cn, 2))
+      colnames(mat) <- paste(sym, cn, sep=".")
+
+      mat <- convert.time.series(mat, return.class=return.class)
+    }
+    if (auto.assign)
+      assign(sym, mat, env)
+    return(mat)
+  }
+  
+  matrices <- lapply(Symbols, FUN=downloadOne,
+                     default.return.class=default.return.class,
+                     default.periodicity=default.periodicity)
+  
+  if (auto.assign) {
+    return(Symbols)
+  } else {
+    return(matrices[[1]])
+  }
+}
+
+# Mnemonic alias, letting callers use getSymbols("IBM", src="alphavantage")
+getSymbols.alphavantage <- getSymbols.av
 
 # convert.time.series {{{
 `convert.time.series` <- function(fr,return.class) {
