@@ -264,8 +264,8 @@ function(symbol, from, to, period, type, handle)
   e <- match.arg(type, c("history", "div", "split"))
   n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
   u <- paste0("https://query", n, ".finance.yahoo.com/v7/finance/download/",
-              symbol, "?period1=", from, "&period2=", to, "&interval=", p,
-              "&events=", e, "&crumb=", handle$cb)
+              symbol, sprintf("?period1=%.0f&period2=%.0f", from, to),
+              "&interval=", p, "&events=", e, "&crumb=", handle$cb)
   return(u)
 }
 
@@ -1316,7 +1316,7 @@ getSymbols.av <- function(Symbols, env, api.key,
     
     if (verbose) cat("loading", sym.name, ".....")
     
-    URL <- paste0("http://www.alphavantage.co/query",
+    URL <- paste0("https://www.alphavantage.co/query",
                   "?function=", FUNCTION,
                   "&symbol=", sym.name,
                   "&interval=", interval,

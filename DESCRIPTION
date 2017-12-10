@@ -1,8 +1,8 @@
 Package: quantmod
 Type: Package
 Title: Quantitative Financial Modelling Framework
-Version: 0.4-11
-Date: 2017-10-06
+Version: 0.4-12
+Date: 2017-12-02
 Authors@R: c(
   person(given=c("Jeffrey","A."), family="Ryan", role=c("aut","cph")),
   person(given=c("Joshua","M."), family="Ulrich", role=c("cre","aut"), email="josh.m.ulrich@gmail.com"),
@@ -17,12 +17,12 @@ LazyLoad: yes
 License: GPL-3
 URL: http://www.quantmod.com https://github.com/joshuaulrich/quantmod
 BugReports: https://github.com/joshuaulrich/quantmod/issues
-NeedsCompilation: yes
-Packaged: 2017-10-06 17:56:02 UTC; josh
+NeedsCompilation: no
+Packaged: 2017-12-02 16:45:04 UTC; josh
 Author: Jeffrey A. Ryan [aut, cph],
   Joshua M. Ulrich [cre, aut],
   Wouter Thielen [ctb],
   Paul Teetor [ctb]
 Maintainer: Joshua M. Ulrich <josh.m.ulrich@gmail.com>
 Repository: CRAN
-Date/Publication: 2017-10-06 20:33:46 UTC
+Date/Publication: 2017-12-10 17:13:49 UTC

@@ -1,5 +1,4 @@
-00bbff4678cbb80cd0f11a327e337767 *CHANGES
-3b1973eb84d8ac30d6955b1103dac4dc *DESCRIPTION
+575d562cde3cd5373d3a55729f3b74d1 *DESCRIPTION
 233117a4589bfd1040af229fc56edd22 *NAMESPACE
 3a7e2e323d1519f1c19cdc041d1025d6 *R/Defaults.R
 fea30b0226f717064ccc77364ffa8c99 *R/OHLC.transformations.R
@@ -28,8 +27,8 @@ dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 4d838787166eed631b194708bd7c2030 *R/axTicksByTime2.R
 76afeb22c2c2c41bfdbc99f711329697 *R/buildModel.R
 6767384c2917d19a199aa6b287581c7b *R/buildModel.methods.R
-614147c292cfd0d1602dab446d038e2a *R/chartSeries.R
-4ec6bec056ff6f93bbff90d22b9c9cf8 *R/chartSeries.chob.R
+b165b297cbf6f1c2962aa0703379151e *R/chartSeries.R
+327554b7ab56bf90ce89e04d1013a277 *R/chartSeries.chob.R
 1aff8241d99c7176b7cc4197f0ca33a6 *R/chart_Series.R
 e757dd1caa28cedbc8fd9663bb92bc34 *R/chob.R
 71b6499c3e1c0c431cdec0c90b513f74 *R/dropTA.R
@@ -38,9 +37,9 @@ b4576be3b9f33631248741eeed935524 *R/getDividends.R
 ca72e4fe607f117cced5ba897d391d76 *R/getFinancials.R
 b7d8972d888dbcbb8f7ddd463b286899 *R/getModelData.R
 b490d880080777780ab9cab56c4c7183 *R/getOptionChain.R
-b5a4bcf07f00583334609f5110d6ec88 *R/getQuote.R
+5239e74ffc18018edb308f4160a86133 *R/getQuote.R
 afd6f0235f5b070ed34314c522416d91 *R/getSplits.R
-f86b875576cf88cf3745e3fbf37314b1 *R/getSymbols.R
+1c27b2f49649e0ab914eca0023798a69 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
 ce5eaff302ecf73b9767a2f8446f9ae8 *R/loadSymbols.R
 d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
@@ -102,7 +101,7 @@ bcc41e33fb7a920d930fa04fd5fa3ba4 *man/chartTheme.Rd
 0815d81769561834122a011bb6ad6122 *man/getMetals.Rd
 dffc24b805d53c3e11f0463d6f03716e *man/getModelData.Rd
 07360df11fdafc920a6310bccc34db71 *man/getOptionChain.Rd
-e70438ed0baae10e5589597b3c0d47f9 *man/getQuote.Rd
+23f05ea565152a7decc04bfb76d19fa0 *man/getQuote.Rd
 c7ba5b64a1d1d62b9f8b7041562d218c *man/getSplits.Rd
 1770a491a803e55df4a04a1ea5f0fa9b *man/getSymbols.FRED.Rd
 087021416760edb3c8b5d35b0c5c5aea *man/getSymbols.MySQL.Rd
@@ -125,7 +124,7 @@ dbfd3a6b8beda5133ba2ad6edaa1100c *man/getSymbols.rda.Rd
 613eafafc8dbf5efff13ea525049dd9a *man/peak.Rd
 bc6581844a8666a1a3e21786dda9e1b8 *man/periodReturn.Rd
 1bc893d43208cf1329903928d6df751f *man/quantmod-class.Rd
-2cbae465a882c36bd21fe88353eef238 *man/quantmod-package.Rd
+b4c8864f4d4dbb1ec91fcf3c4bc1c0da *man/quantmod-package.Rd
 f93d01b8ea2c1ff138f675e047a382ef *man/quantmod.OHLC.Rd
 b8c1ada5347961c4591f0be419ab4870 *man/saveChart.Rd
 5dad5e24a2ca3054c8084d06fc26576d *man/setSymbolLookup.Rd
