@@ -79,7 +79,20 @@ function(Symbols,what=standardQuote(),...) {
   }
 
   Symbols <- unlist(strsplit(Symbols,','))
-  df <- data.frame(Qposix, sq[,QF])
+
+  # Extract user-requested columns. Convert to list to avoid
+  # 'undefined column' error with data.frame.
+  qflist <- setNames(as.list(sq)[QF], QF)
+
+  # Fill any missing columns with NA
+  pad <- rep(NA, length(Symbols))
+  qflist <- lapply(qflist, function(e) if (is.null(e)) pad else e)
+
+  # Add the trade time and setNames() on other elements
+  qflist <- c(list(regularMarketTime = Qposix), setNames(qflist, QF))
+
+  df <- data.frame(qflist, stringsAsFactors = FALSE, check.names = FALSE)
+
   rownames(df) <- Symbols
   if(!is.null(QF.names)) {
     colnames(df) <- c('Trade Time',QF.names)
@@ -267,3 +280,44 @@ matrix(c(
   #"Error Indication (returned for symbol changed / invalid)", "Error Indication (returned for symbol changed / invalid)", "e1",
   ),
 ncol = 3, byrow = TRUE, dimnames = list(NULL, c("name", "shortname", "field")))
+
+getQuote.av <- function(Symbols, api.key, ...) {
+  importDefaults("getQuote.av")
+  if(!hasArg("api.key")) {
+    stop("getQuote.av: An API key is required (api.key). Free registration,",
+         " at https://www.alphavantage.co/.", call.=FALSE)
+  }
+  URL <- paste0("https://www.alphavantage.co/query",
+                "?function=BATCH_STOCK_QUOTES",
+                "&apikey=", api.key,
+                "&symbols=")
+  # av supports batches of 100
+  nSymbols <- length(Symbols)
+  result <- NULL
+  for(i in seq(1, nSymbols, 100)) {
+    if(i > 1) {
+      Sys.sleep(0.25)
+      cat("getQuote.av downloading batch", i, ":", i + 99, "\n")
+    }
+    batchSymbols <- Symbols[i:min(nSymbols, i + 99)]
+    batchURL <- paste0(URL, paste(batchSymbols, collapse = ","))
+    response <- jsonlite::fromJSON(batchURL)
+    if(is.null(result)) {
+      result <- response[["Stock Quotes"]]
+    } else {
+      result <- rbind(result, response[["Stock Quotes"]])
+    }
+  }
+  colnames(result) <- c("Symbol", "Last", "Volume", "Trade Time")
+  result$Volume <- suppressWarnings(as.numeric(result$Volume))
+  result$Last <- as.numeric(result$Last)
+  quoteTZ <- response[["Meta Data"]][["3. Time Zone"]]
+  result$`Trade Time` <- as.POSIXct(result$`Trade Time`, tz = quoteTZ)
+
+  # merge join to produce empty rows for missing results from AV
+  # so that return value has the same rows and order as the input
+  output <- merge(data.frame(Symbol = Symbols), result,
+                  by = "Symbol", all.x = TRUE)
+  rownames(output) <- output$Symbol
+  return(output[, c("Trade Time", "Last", "Volume")])
+}
