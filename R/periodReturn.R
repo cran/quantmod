@@ -15,7 +15,7 @@ function(x,period='monthly',subset=NULL,type='arithmetic',leading=TRUE,...) {
     TS <- TRUE
   } else TS <- FALSE
 
-  if(has.Op(xx) & has.Cl(xx)) {
+  if(has.Op(xx) && has.Cl(xx)) {
     getFirst <- function(X) Op(X)
     getLast  <- function(X) Cl(X)
   } else getFirst <- getLast <- function(X) X[,1]
@@ -56,7 +56,7 @@ function(x,period='monthly',subset=NULL,type='arithmetic',...) {
   x <- as.xts(x)
   .originalCLASS <- CLASS(x)
   .originalAttr <- xtsAttributes(x)
-  .originalIndexClass <- indexClass(x)
+  .originalIndexClass <- tclass(x)
 
   x <- Delt(Cl(x),type=type)
 
@@ -66,7 +66,7 @@ function(x,period='monthly',subset=NULL,type='arithmetic',...) {
   # replace attributes lost to Delt fun and reclass
   CLASS(x) <- .originalCLASS
   xtsAttributes(x) <- .originalAttr
-  indexClass(x) <- .originalIndexClass
+  tclass(x) <- .originalIndexClass
   reclass(x)
 }
 

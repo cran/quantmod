@@ -6,23 +6,28 @@
 
 `getQuote` <-
 function(Symbols,src='yahoo',what, ...) {
+  Symbols <- unique(unlist(strsplit(Symbols,";")))
   args <- list(Symbols=Symbols,...)
   if(!missing(what))
       args$what <- what
-  do.call(paste('getQuote',src,sep='.'), args)
+  df <- do.call(paste('getQuote',src,sep='.'), args)
+  if(nrow(df) != length(Symbols)) {
+    # merge to generate empty rows for missing results from underlying source
+    allSymbols <- data.frame(Symbol = Symbols, stringsAsFactors = FALSE)
+    df <- merge(allSymbols, df, by = "Symbol", all.x = TRUE)
+  }
+  rownames(df) <- df$Symbol
+  df$Symbol <- NULL
+  # order result the same as Symbols input
+  df[Symbols,]
 }
 
 `getQuote.yahoo` <-
 function(Symbols,what=standardQuote(),...) {
-  tmp <- tempfile()
-  on.exit(unlink(tmp))
-  if(length(Symbols) > 1 && is.character(Symbols))
-    Symbols <- paste(Symbols,collapse=";")
-  length.of.symbols <- length(unlist(strsplit(Symbols, ";")))
+  length.of.symbols <- length(Symbols)
   if(length.of.symbols > 200) {
     # yahoo only works with 200 symbols or less per call
     # we will recursively call getQuote.yahoo to handle each block of 200
-    Symbols <- unlist(strsplit(Symbols,";"))
     all.symbols <- lapply(seq(1,length.of.symbols,200),
                           function(x) na.omit(Symbols[x:(x+199)]))
     df <- NULL
@@ -35,7 +40,7 @@ function(Symbols,what=standardQuote(),...) {
     cat("...done\n")
     return(df)
   }
-  Symbols <- paste(strsplit(Symbols,';')[[1]],collapse=',')
+  SymbolsString <- paste(Symbols,collapse=',')
   if(inherits(what, 'quoteFormat')) {
     QF <- what[[1]]
     QF.names <- what[[2]]
@@ -48,13 +53,11 @@ function(Symbols,what=standardQuote(),...) {
   # exchange, fullExchangeName, market, sourceInterval, exchangeTimezoneName,
   # exchangeTimezoneShortName, gmtOffSetMilliseconds, tradeable, symbol
   QFc <- paste0(QF,collapse=',')
-  download.file(paste0(
-                "https://query1.finance.yahoo.com/v7/finance/quote?symbols=",
-                Symbols,
-                "&fields=",QFc),
-                destfile=tmp,quiet=TRUE)
+  URL <- paste0("https://query1.finance.yahoo.com/v7/finance/quote?symbols=",
+                SymbolsString,
+                "&fields=",QFc)
   # The 'response' data.frame has fields in columns and symbols in rows
-  response <- jsonlite::fromJSON(tmp)
+  response <- jsonlite::fromJSON(curl::curl(URL))
   if (is.null(response$quoteResponse$error)) {
     sq <- response$quoteResponse$result
   } else {
@@ -71,24 +74,22 @@ function(Symbols,what=standardQuote(),...) {
     Qposix <- .POSIXct(sq$regularMarketTime, tz = NULL)  # force local timezone
   }
 
-  Symbols <- unlist(strsplit(Symbols,','))
-
   # Extract user-requested columns. Convert to list to avoid
   # 'undefined column' error with data.frame.
   qflist <- setNames(as.list(sq)[QF], QF)
 
   # Fill any missing columns with NA
-  pad <- rep(NA, length(Symbols))
+  pad <- rep(NA, nrow(sq))
   qflist <- lapply(qflist, function(e) if (is.null(e)) pad else e)
 
-  # Add the trade time and setNames() on other elements
-  qflist <- c(list(regularMarketTime = Qposix), setNames(qflist, QF))
+  # Add the symbols and trade time, and setNames() on other elements
+  qflist <- c(list(Symbol = sq$symbol, regularMarketTime = Qposix),
+              setNames(qflist, QF))
 
   df <- data.frame(qflist, stringsAsFactors = FALSE, check.names = FALSE)
 
-  rownames(df) <- Symbols
   if(!is.null(QF.names)) {
-    colnames(df) <- c('Trade Time',QF.names)
+    colnames(df) <- c('Symbol','Trade Time',QF.names)
   }
   df
 }
@@ -230,8 +231,8 @@ matrix(c(
   #"Short Ratio", "Short Ratio", "s7",
 
   # dividends / splits
-  "Ex-Dividend Date", "Ex-Dividend Date", "dividendDate",
-  #"Dividend Pay Date", "Dividend Pay Date", "r1",
+  "Ex-Dividend Date", "Ex-Dividend Date", "exDividendDate",
+  "Dividend Pay Date", "Dividend Pay Date", "dividendDate",
   "Dividend/Share", "Dividend/Share", "trailingAnnualDividendRate",
   "Dividend Yield", "Dividend Yield", "trailingAnnualDividendYield",
 
@@ -281,44 +282,84 @@ getQuote.av <- function(Symbols, api.key, ...) {
          " at https://www.alphavantage.co/.", call.=FALSE)
   }
   URL <- paste0("https://www.alphavantage.co/query",
-                "?function=BATCH_STOCK_QUOTES",
+                "?function=GLOBAL_QUOTE",
                 "&apikey=", api.key,
-                "&symbols=")
-  # av supports batches of 100
-  nSymbols <- length(Symbols)
-  result <- NULL
-  for(i in seq(1, nSymbols, 100)) {
-    if(i > 1) {
-      Sys.sleep(0.25)
-      cat("getQuote.av downloading batch", i, ":", i + 99, "\n")
-    }
-    batchSymbols <- Symbols[i:min(nSymbols, i + 99)]
-    batchURL <- paste0(URL, paste(batchSymbols, collapse = ","))
-    response <- jsonlite::fromJSON(batchURL)
+                "&symbol=")
 
-    if(NROW(response[["Stock Quotes"]]) < 1) {
-      syms <- paste(batchSymbols, collapse = ", ")
-      stop("No data for symbols: ", syms)
-    }
+  # column metadata
+  map <- data.frame(
+    qm.names = c("Symbol", "Open", "High", "Low", "Last", "Volume",
+                "Trade Time", "P. Close", "Change", "% Change"),
+    av.names = c("symbol", "open", "high", "low", "price", "volume",
+                "latest trading day", "previous close", "change", "change percent"),
+    is.number = c(FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE),
+    stringsAsFactors = FALSE
+  )
+  prefix <- sprintf("%02d.", seq_len(nrow(map)))
+  map[["av.names"]] <- paste(prefix, map[["av.names"]])
 
-    if(is.null(result)) {
-      result <- response[["Stock Quotes"]]
+  # Function to process each quote response
+  quote2df <-
+    function(response, map)
+  {
+    # Expected response structure
+    qres <- setNames(vector("list", nrow(map)), map[["av.names"]])
+
+    elem <- function(el)
+    {
+      # process numeric columns
+      res <- NA_real_
+      if (!is.null(el)) {
+        haspct <- grepl("%", el, fixed = TRUE)
+        if (haspct) {
+          el <- sub("%", "", el, fixed = TRUE)
+          res <- as.numeric(el) / 100
+        } else {
+          res <- as.numeric(el)
+        }
+      }
+      res
+    }
+    tmp <- modifyList(qres, response)
+    tonum <- map[["is.number"]]
+    tmp[tonum] <- lapply(tmp[tonum], elem)
+
+    data.frame(tmp, stringsAsFactors = FALSE)
+  }
+
+  # get latest daily quotes from AV
+  # they don't have batch quotes anymore as of Feb 2020
+  Symbols <- toupper(Symbols)
+  qlist <- list()
+
+  for (Symbol in Symbols) {
+    # Alpha Vantage's standard API is limited 5 calls/minute (~0.0833/sec)
+    Sys.sleep(0.1)
+    resp <- jsonlite::fromJSON(paste0(URL, Symbol))
+
+    if (names(resp)[1] != "Global Quote") {
+      msg <- paste(names(resp)[1], resp[[1]], sep = ": ")
+      warning(paste0("getQuote.av didn't return a quote for ", Symbol, "\n",
+                     "\tMessage: \"", msg, "\""),
+              call. = FALSE, immediate. = TRUE)
     } else {
-      result <- rbind(result, response[["Stock Quotes"]])
+      resp <- resp[[1]]  # resp$`Global Quote`
+      qlist[[Symbol]] <- quote2df(resp, map)
     }
   }
-  colnames(result) <- c("Symbol", "Last", "Volume", "Trade Time")
-  result$Volume <- suppressWarnings(as.numeric(result$Volume))
-  result$Last <- as.numeric(result$Last)
-  quoteTZ <- response[["Meta Data"]][["3. Time Zone"]]
-  result$`Trade Time` <- as.POSIXct(result$`Trade Time`, tz = quoteTZ)
 
-  # merge join to produce empty rows for missing results from AV
-  # so that return value has the same rows and order as the input
-  output <- merge(data.frame(Symbol = Symbols), result,
-                  by = "Symbol", all.x = TRUE)
-  rownames(output) <- output$Symbol
-  return(output[, c("Trade Time", "Last", "Volume")])
+  qdf <- do.call(rbind, qlist)
+
+  if (NROW(qdf) < 1) {
+    syms <- paste(Symbols, collapse = ", ")
+    stop("Error in getQuote.av; no data for symbols: ",
+         syms, call. = FALSE)
+  }
+
+  names(qdf) <- map[["qm.names"]]
+  qdf[["Trade Time"]] <- as.Date(qdf[["Trade Time"]])
+
+  return(qdf)
 }
 
 `getQuote.tiingo` <- function(Symbols, api.key, ...) {
@@ -329,6 +370,8 @@ getQuote.av <- function(Symbols, api.key, ...) {
     stop("getQuote.tiingo: An API key is required (api.key). ",
          "Registration at https://api.tiingo.com/.", call. = FALSE)
   }
+
+  Symbols <- unlist(strsplit(Symbols,';'))
 
   base.url <- paste0("https://api.tiingo.com/iex/?token=", api.key)
   r <- NULL
@@ -353,11 +396,12 @@ getQuote.av <- function(Symbols, api.key, ...) {
       batch.url <- paste0(base.url, "&tickers=", paste(Symbols[i:batch.end], collapse = ","))
     }
 
-    batch.result <- jsonlite::fromJSON(batch.url)
+    batch.result <- jsonlite::fromJSON(curl::curl(batch.url))
 
     if(NROW(batch.result) < 1) {
       syms <- paste(Symbols[i:batch.end], collapse = ", ")
-      stop("No data for symbols: ", syms)
+      stop("Error in getQuote.tiingo; no data for symbols: ",
+           syms, call. = FALSE)
     }
 
     # do type conversions for each batch so we don't get issues with rbind
@@ -372,13 +416,8 @@ getQuote.av <- function(Symbols, api.key, ...) {
     r <- rbind(r, batch.result)
   }
 
-  colnames(r) <- gsub("(^[[:alpha:]])", "\\U\\1", colnames(r), perl = TRUE)
-  r[, "Trade Time"] <- r[, "LastSaleTimestamp"]
-
-  # merge join to produce empty rows for missing results from AV
-  # so that return value has the same number of rows and order as the input
-  if(!is.null(Symbols)) r <- merge(data.frame(Ticker = Symbols), r, by = "Ticker", all.x = TRUE)
-  rownames(r) <- r$Ticker
-  std.cols <- c("Trade Time", "Open", "High", "Low", "Last", "Volume")
-  return(r[, c(std.cols, setdiff(colnames(r), c(std.cols, "Ticker")))])
+  # Normalize column names and output
+  r <- r[, c("ticker", "lastSaleTimestamp", "open", "high", "low", "last", "volume")]
+  colnames(r) <- c("Symbol", "Trade Time", "Open", "High", "Low", "Last", "Volume")
+  return(r)
 }

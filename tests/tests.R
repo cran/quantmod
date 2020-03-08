@@ -1,3 +1,6 @@
+av.key <- Sys.getenv("AV_API_KEY")
+tiingo.key <- Sys.getenv("TIINGO_API_KEY")
+
 # Call as.zoo before quantmod is loaded and registers its S3 method
 dc <- c("2015-01-01", "2016-01-01", "2017-01-01")
 dd <- as.Date(dc)
@@ -34,3 +37,27 @@ x <- try(
   quantmod::getSymbols("AAPL", src = "tiingo", data.type = "json", api.key = errorKey)
 , silent = TRUE)
 stopifnot(inherits(x, "try-error"))
+
+syms <- c("SPY", "WYSIWYG")
+symstr <- paste(syms, collapse = ";")
+x <- try(getQuote(symstr, src = "yahoo"), silent = TRUE)
+stopifnot(inherits(x, "data.frame") && all(rownames(x) == syms))
+stopifnot(!is.na(x["SPY", "Last"]) && is.na(x["WYSIWYG", "Last"]))
+
+#test batch handling
+x <- getQuote(c("SPY", paste0(LETTERS, 1:199), "IWM"), src = "yahoo")
+stopifnot(inherits(x, "data.frame") && nrow(x) == 201L)
+
+if (av.key != "") {
+  x <- try(getQuote(symstr, src = "av", api.key = av.key), silent = TRUE)
+  stopifnot(inherits(x, "data.frame") && all(rownames(x) == syms))
+}
+if (tiingo.key != "") {
+  x <- try(getQuote(symstr, src = "tiingo", api.key = tiingo.key), silent = TRUE)
+  stopifnot(inherits(x, "data.frame") && all(rownames(x) == syms))
+}
+
+# ensure symbol order is preserved
+syms <- sample(c("SPY", "TLT", "IWM", "QQQ", "WYSIWYG"))
+x <- try(getQuote(syms, src = "yahoo"), silent = TRUE)
+stopifnot(inherits(x, "data.frame") && all(rownames(x) == syms))
