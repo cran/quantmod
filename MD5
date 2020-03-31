@@ -1,6 +1,6 @@
-19a6d93e219f17b5c8f5692f7f6c7c40 *DESCRIPTION
+ea5603b5716dccb31a25a5321b48f4e0 *DESCRIPTION
 6f01f39e138544785f4892245772862d *NAMESPACE
-d9c4db978f46d6c36884fd0bb92d2d1f *NEWS.md
+45543c83ca8884fd16cf8ee912c1b595 *NEWS.md
 3a7e2e323d1519f1c19cdc041d1025d6 *R/Defaults.R
 fea30b0226f717064ccc77364ffa8c99 *R/OHLC.transformations.R
 3eb6c31d57d927394ac1732823b7e519 *R/Price.transformations.R
@@ -28,7 +28,7 @@ dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 4d838787166eed631b194708bd7c2030 *R/axTicksByTime2.R
 76afeb22c2c2c41bfdbc99f711329697 *R/buildModel.R
 6767384c2917d19a199aa6b287581c7b *R/buildModel.methods.R
-c04b800bc09a2c4830f5a3e0bfffd5a6 *R/chartSeries.R
+fc284e92a5bd1685aeb362bd42022e34 *R/chartSeries.R
 62597d41261ae3390f0d0ffe6c120738 *R/chartSeries.chob.R
 161bbb744479ea0ceed2d16e5a1f173d *R/chart_Series.R
 22cdae299dafdc7504d77863a19f7996 *R/chob.R
@@ -65,7 +65,7 @@ d278a4eb9201362be8b7475b73cf710b *R/tradeLog.R
 0c99badd6fea917d849505328953cc7d *R/updateModel.R
 efea22ce21431595d7d7f76bd8dfa5ae *R/zoomChart.R
 da2bc958329e494d27beb6074285fd0d *R/zzz.R
-35c20a544a27afb47cb3d927372f895e *build/partial.rdb
+022b74d67b6c98f0d0d7737ce391d4cc *build/partial.rdb
 512fd036a11aafe3d7e82c8b045baf63 *demo/00Index
 f0f55a8e00e795c94275d57d4cd09aa1 *demo/chartSeries.R
 afd7a0159368fb7cbfba3c49c52c46fa *man/Defaults.Rd
