@@ -14,7 +14,9 @@ getDividends(Symbol,
              auto.assign = FALSE, 
              auto.update = FALSE, 
              verbose = FALSE,
-             split.adjust = TRUE, ...)
+             split.adjust = TRUE,
+             ...,
+             curl.options = list())
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -29,6 +31,7 @@ getDividends(Symbol,
   \item{split.adjust}{ adjust dividends for splits (\code{TRUE} by default
     because that's what Yahoo returns)}
   \item{\dots}{ currently unused }
+  \item{curl.options}{ options passed to \code{curl::curl} }
 }
 \details{
 Eventually destined to be a wrapper function along the lines
@@ -48,7 +51,7 @@ to the environment specified by \code{env}.
 All other cases will return the dividend data
 as an \code{xts} object.
 }
-\references{ Yahoo! Finance: \url{http://finance.yahoo.com}}
+\references{ Yahoo! Finance: \url{https://finance.yahoo.com}}
 \author{ Jeffrey A. Ryan }
 \note{ 
 This function is very preliminary - and will most likely

@@ -334,25 +334,13 @@ function(Symbols,env,return.class='xts',index.class="Date",
 
        yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
                               interval, "history", handle)
-       fr <- try(read.csv(curl::curl(yahoo.URL, handle = handle$ch), na.strings="null"),
-                 silent = TRUE)
+       conn <- curl::curl(yahoo.URL, handle = handle$ch)
+       fr <- try(read.csv(conn, na.strings="null"), silent = TRUE)
 
        if (inherits(fr, "try-error")) {
-         # warn user about the failure
-         warning(Symbols.name, " download failed; trying again.",
-                 call. = FALSE, immediate. = TRUE)
-         # re-create handle
-         handle <- .getHandle(curl.options, force.new = TRUE)
-         # try again. must rebuild url with crumbs
-         yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
-                                interval, "history", handle)
-         fr <- try(read.csv(curl::curl(yahoo.URL, handle = handle$ch), na.strings="null"),
-                   silent = TRUE)
-         # error if second attempt also failed
-         if (inherits(fr, "try-error")) {
-           stop(Symbols.name, " download failed after two attempts. Error",
-                " message:\n", attr(fr, "condition")$message, call. = FALSE)
-         }
+         fr <- retry.yahoo(Symbols.name, from.posix, to.posix, interval,
+                           "history", curl.options = curl.options,
+                           na.strings = NULL)
        }
 
        if(verbose) cat("done.\n")
@@ -431,8 +419,8 @@ function(Symbols,env,return.class='xts',index.class="Date",
         if(!hasArg("verbose")) verbose <- FALSE
         if(!hasArg("auto.assign")) auto.assign <- TRUE
 
-        if(!requireNamespace("XML", quietly=TRUE))
-          stop("package:",dQuote("XML"),"cannot be loaded.")
+        if(!requireNamespace("xml2", quietly=TRUE))
+          stop("package:",dQuote("xml2"),"cannot be loaded.")
 
         yahoo.URL <- "https://info.finance.yahoo.co.jp/history/"
 
@@ -496,8 +484,8 @@ function(Symbols,env,return.class='xts',index.class="Date",
                                     "&p=",page,
                                     sep='')
                 
-                fdoc <- XML::htmlParse(URL)
-                rows <- XML::xpathApply(fdoc, "//table[@class='boardFin yjSt marB6']//tr")
+                fdoc <- xml2::read_html(URL)
+                rows <- xml2::xml_find_all(fdoc, "//table[@class='boardFin yjSt marB6']//tr")
                 if (length(rows) <= 1) break
                 
                 totalrows <- c(totalrows, rows)
@@ -513,19 +501,19 @@ function(Symbols,env,return.class='xts',index.class="Date",
             cols <- c('Open','High','Low','Close','Volume','Adjusted')
             
             firstrow <- totalrows[[1]]
-            cells <- XML::getNodeSet(firstrow, "th")
+            cells <- xml2::xml_find_all(firstrow, "th")
             if (length(cells) == 5) cols <- cols[-(5:6)]
 
             # Process from the start, for easier stocksplit management
             totalrows <- rev(totalrows)
             mat <- matrix(0, ncol=length(cols) + 1, nrow=0, byrow=TRUE)
             for(row in totalrows) {
-                cells <- XML::getNodeSet(row, "td")
+                cells <- xml2::xml_find_all(row, "td")
                 
                 # 2 cells means it is a stocksplit row
                 # So extract stocksplit data and recalculate the matrix we have so far
                 if (length(cells) == 2 && length(cols) == 6 & nrow(mat) > 1) {
-                    ss.data <- as.numeric(na.omit(as.numeric(unlist(strsplit(XML::xmlValue(cells[[2]]), "[^0-9]+")))))
+                    ss.data <- as.numeric(na.omit(as.numeric(unlist(strsplit(xml2::xml_text(cells[[2]]), "[^0-9]+")))))
                     factor <- ss.data[2] / ss.data[1]
                     
                     mat <- rbind(t(apply(mat[-nrow(mat),], 1, function(x) {
@@ -539,10 +527,10 @@ function(Symbols,env,return.class='xts',index.class="Date",
                 # \u5e74 = "year"
                 # \u6708 = "month"
                 # \u65e5 = "day"
-                date <- as.Date(XML::xmlValue(cells[[1]]), format="%Y\u5e74%m\u6708%d\u65e5")
+                date <- as.Date(xml2::xml_text(cells[[1]]), format="%Y\u5e74%m\u6708%d\u65e5")
                 entry <- c(date)
                 for(n in 2:length(cells)) {
-                    entry <- cbind(entry, as.numeric(gsub(",", "", XML::xmlValue(cells[[n]]))))
+                    entry <- cbind(entry, as.numeric(gsub(",", "", xml2::xml_text(cells[[n]]))))
                 }
                 
                 mat <- rbind(mat, entry)
@@ -1550,24 +1538,27 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
                   "?startDate=", from.strftime,
                   "&endDate=", to.strftime,
                   "&format=", data.type,
-                  "&token=", api.key,
                   "&columns=", paste0(return.columns, collapse=","))
     # If rate limit is hit, the csv API returns HTTP 200 (OK), while json API
     # returns HTTP 429. The latter caused download.file() to error, but the
     # contents of 'tmp' still contain the error message.
+    h <- curl::new_handle()
+    curl::handle_setheaders(h, Authorization = paste("Token", api.key))
+    response <- curl::curl_fetch_memory(URL, h)
+    response.data <- rawToChar(response$content)
 
     if (data.type == "json") {
-      stock.data <- jsonlite::fromJSON(URL)
+      stock.data <- jsonlite::fromJSON(response.data)
       if (verbose) cat("done.\n")
     } else {
-      stock.data <- read.csv(curl::curl(URL), as.is=TRUE)
+      stock.data <- read.csv(text=response.data, as.is=TRUE)
     }
     # check for error
     if (!all(return.columns %in% names(stock.data))) {
       if (data.type == "json") {
         msg <- stock.data$detail
       } else {
-        msg <- readLines(curl::curl(URL), warn=FALSE)
+        msg <- readLines(response.data, warn=FALSE)
       }
       msg <- sub("Error: ", "", msg)
       stop(msg, call. = FALSE)

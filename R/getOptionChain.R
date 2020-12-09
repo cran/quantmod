@@ -2,10 +2,12 @@
 function(Symbols, Exp=NULL, src="yahoo", ...) {
   Call <- paste("getOptionChain",src,sep=".")
   if(missing(Exp)) {
-    do.call(Call, list(Symbols=Symbols, ...))
+    optionChain <- do.call(Call, list(Symbols=Symbols, ...))
   } else {
-    do.call(Call, list(Symbols=Symbols, Exp=Exp, ...))
+    optionChain <- do.call(Call, list(Symbols=Symbols, Exp=Exp, ...))
   }
+  # only return non- NULL elements
+  optionChain[!vapply(optionChain, is.null, logical(1))]
 }
 
 getOptionChain.yahoo <- function(Symbols, Exp, ...)
@@ -13,7 +15,7 @@ getOptionChain.yahoo <- function(Symbols, Exp, ...)
   if(!requireNamespace("jsonlite", quietly=TRUE))
     stop("package:",dQuote("jsonlite"),"cannot be loaded.")
 
-  NewToOld <- function(x) {
+  NewToOld <- function(x, tz = NULL) {
     if(is.null(x) || length(x) < 1)
       return(NULL)
     # clean up colnames, in case there's weirdness in the JSON
@@ -22,14 +24,16 @@ getOptionChain.yahoo <- function(Symbols, Exp, ...)
     d <- with(x, data.frame(Strike=strike, 
                             Last=lastprice, 
                             Chg=change,
-                            Bid=bid, 
-                            Ask=ask, 
+                            Bid= if("bid" %in% names(x)) {bid} else {NA}, 
+                            Ask= if("ask" %in% names(x)) {ask} else {NA},    
                             Vol= if("volume" %in% names(x)) {volume} else {NA}, 
                             OI= if("openinterest" %in% names(x)) {openinterest} else {NA},
+                            LastTradeTime= if("lasttradedate" %in% names(x)) {lasttradedate} else {NA},
+                            IV= if("impliedvolatility" %in% names(x)) {impliedvolatility} else {NA},
+                            ITM= if("inthemoney" %in% names(x)) {inthemoney} else {NA},
                             row.names=contractsymbol, stringsAsFactors=FALSE))
-    # remove commas from the numeric data
-    d[] <- lapply(d, gsub, pattern=",", replacement="", fixed=TRUE)
-    d[] <- lapply(d, type.convert, as.is=TRUE)
+    # convert trade time to exchange timezone
+    d$LastTradeTime <- .POSIXct(d$LastTradeTime, tz=tz)
     d
   }
 
@@ -42,7 +46,16 @@ getOptionChain.yahoo <- function(Symbols, Exp, ...)
     urlExp <- paste0(urlExp, "?&date=", Exp)
 
   # Fetch data (jsonlite::fromJSON will handle connection)
-  tbl <- jsonlite::fromJSON(urlExp)
+  tbl <- try(jsonlite::fromJSON(urlExp), silent = TRUE)
+
+  if(inherits(tbl, "try-error")) {
+    msg <- attr(tbl, "condition")[["message"]]
+    expDate <- .Date(Exp / 86400)
+    warning("no data for '", Symbols[1], "' expiry ", expDate,
+            ", omitting\n\t(server response: ", msg, ")",
+            immediate. = TRUE, call. = FALSE)
+    return(NULL)
+  }
 
   # Only return nearest expiry (default served by Yahoo Finance), unless the user specified Exp
   if(!missing(Exp) && checkExp) {
@@ -83,7 +96,10 @@ getOptionChain.yahoo <- function(Symbols, Exp, ...)
   }
 
   dftables <- lapply(tbl$optionChain$result$options[[1]][,c("calls","puts")], `[[`, 1L)
-  dftables <- mapply(NewToOld, x=dftables, SIMPLIFY=FALSE)
+
+  tz <- tbl$optionChain$result$quote$exchangeTimezoneName[1L]
+
+  dftables <- lapply(dftables, NewToOld, tz=tz)
   dftables
 }
 

@@ -13,7 +13,9 @@ getSplits(Symbol,
           src = "yahoo", 
           auto.assign = FALSE, 
           auto.update = FALSE, 
-          verbose = FALSE, ...)
+          verbose = FALSE,
+          ...,
+          curl.options = list())
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -26,6 +28,7 @@ getSplits(Symbol,
   \item{auto.update}{ automatically add split to data object }
   \item{verbose}{ display status of retrieval }
   \item{\dots}{ currently unused }
+  \item{curl.options}{ options passed to \code{curl::curl} }
 }
 \details{
 Eventually destined to be a wrapper function along the lines
@@ -46,7 +49,7 @@ All other cases will return the split data
 as an \code{xts} object.  \code{NA} is returned if there
 is no split data.
 }
-\references{ Yahoo! Finance: \url{http://finance.yahoo.com}}
+\references{ Yahoo! Finance: \url{https://finance.yahoo.com}}
 \author{ Josh Ulrich }
 \note{ 
 This function is very preliminary - and will most likely
