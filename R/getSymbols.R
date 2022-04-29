@@ -10,17 +10,7 @@ function(Symbols=NULL,
          symbol.lookup=TRUE,
          auto.assign=getOption('getSymbols.auto.assign',TRUE),
          ...)  {
-      if(getOption("getSymbols.warning4.0",TRUE)) {
-        # transition message for 0.4-0 to 0.5-0
-        message(sQuote('getSymbols'), ' currently uses auto.assign=TRUE by default, but will\n',
-                'use auto.assign=FALSE in 0.5-0. You will still be able to use\n',
-                sQuote('loadSymbols'), ' to automatically load data. getOption("getSymbols.env")\n',
-                'and getOption("getSymbols.auto.assign") will still be checked for\n',
-                'alternate defaults.\n\n',
-                'This message is shown once per session and may be disabled by setting \n',
-                'options("getSymbols.warning4.0"=FALSE). See ?getSymbols for details.\n')
-        options("getSymbols.warning4.0"=FALSE)
-      }
+
       importDefaults("getSymbols")
       #  to enable as-it-was behavior, set this:
       #  options(getSymbols=list(env=substitute(parent.frame(3))))
@@ -219,53 +209,23 @@ formals(loadSymbols) <- loadSymbols.formals
 
   if (is.null(h) || force.new) {
     # create 'h' if it doesn't exist yet
-    if (!force.new) {
-      h <- list()
-    }
+    h <- curl::new_handle()
+    curl::handle_setopt(h, .list = curl.options)
 
-    # establish session
-    new.session <- function() {
-      for (i in 1:5) {
-        h <- curl::new_handle()
-        curl::handle_setopt(h, .list = curl.options)
-
-        # random query to avoid cache
-        ru <- paste(sample(c(letters, 0:9), 4), collapse = "")
-        cu <- paste0("https://finance.yahoo.com?", ru)
-        z <- curl::curl_fetch_memory(cu, handle = h)
-        if (NROW(curl::handle_cookies(h)) > 0)
-          break;
-        Sys.sleep(0.1)
-      }
-
-      if (NROW(curl::handle_cookies(h)) == 0)
-        stop("Could not establish session after 5 attempts.")
-
-      return(h)
-    }
-
-    h$ch <- new.session()
-
-    n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
-    query.srv <- paste0("https://query", n, ".finance.yahoo.com/",
-                        "v1/test/getcrumb")
-    cres <- curl::curl_fetch_memory(query.srv, handle = h$ch)
-
-    h$cb <- rawToChar(cres$content)
     assign("_handle_", h, .quantmodEnv)
   }
   return(h)
 }
 
 .yahooURL <-
-function(symbol, from, to, period, type, handle)
+function(symbol, from, to, period, type)
 {
   p <- match.arg(period, c("1d", "1wk", "1mo"))
   e <- match.arg(type, c("history", "div", "split"))
   n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
   u <- paste0("https://query", n, ".finance.yahoo.com/v7/finance/download/",
               symbol, sprintf("?period1=%.0f&period2=%.0f", from, to),
-              "&interval=", p, "&events=", e, "&crumb=", handle$cb)
+              "&interval=", p, "&events=", e)
   return(u)
 }
 
@@ -333,13 +293,13 @@ function(Symbols,env,return.class='xts',index.class="Date",
        if(verbose) cat("downloading ",Symbols.name,".....\n\n")
 
        yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
-                              interval, "history", handle)
-       conn <- curl::curl(yahoo.URL, handle = handle$ch)
+                              interval, "history")
+       conn <- curl::curl(yahoo.URL, handle = handle)
        fr <- try(read.csv(conn, na.strings="null"), silent = TRUE)
 
        if (inherits(fr, "try-error")) {
          fr <- retry.yahoo(Symbols.name, from.posix, to.posix, interval,
-                           "history", curl.options = curl.options,
+                           "history", conn, curl.options = curl.options,
                            na.strings = NULL)
        }
 
@@ -422,7 +382,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
         if(!requireNamespace("xml2", quietly=TRUE))
           stop("package:",dQuote("xml2"),"cannot be loaded.")
 
-        yahoo.URL <- "https://info.finance.yahoo.co.jp/history/"
+        yahoo.URL <- "https://finance.yahoo.co.jp/quote/"
 
         returnSym <- Symbols
         noDataSym <- NULL
@@ -458,12 +418,8 @@ function(Symbols,env,return.class='xts',index.class="Date",
                 symname <- paste('YJ', symbol, sep="")
             }
 
-            from.y <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][1])
-            from.m <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][2])
-            from.d <- as.numeric(strsplit(as.character(as.Date(from,origin='1970-01-01')),'-',)[[1]][3])
-            to.y <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][1])
-            to.m <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][2])
-            to.d <- as.numeric(strsplit(as.character(as.Date(to,origin='1970-01-01')),'-',)[[1]][3])
+            from.str <- format(as.Date(from), "%Y%m%d")
+            to.str <- format(as.Date(to), "%Y%m%d")
             
             Symbols.name <- getSymbolLookup()[[symname]]$name
             Symbols.name <- ifelse(is.null(Symbols.name),symbol,Symbols.name)
@@ -472,22 +428,17 @@ function(Symbols,env,return.class='xts',index.class="Date",
             page <- 1
             totalrows <- c()
             while (TRUE) {
-                URL <- paste(yahoo.URL,
-                                    "?code=",Symbols.name,
-                                    "&sm=",from.m,
-                                    "&sd=",sprintf('%.2d',from.d),
-                                    "&sy=",from.y,
-                                    "&em=",to.m,
-                                    "&ed=",sprintf('%.2d',to.d),
-                                    "&ey=",to.y,
-                                    "&tm=d",
-                                    "&p=",page,
-                                    sep='')
-                
+                URL <- paste0(yahoo.URL, Symbols.name, "/history?")
+                URL <- paste0(URL, "from=", from.str, "&to=", to.str, "&timeFrame=d&page=", page)
+
                 fdoc <- xml2::read_html(URL)
-                rows <- xml2::xml_find_all(fdoc, "//table[@class='boardFin yjSt marB6']//tr")
-                if (length(rows) <= 1) break
+
+                rows <- xml2::xml_find_all(fdoc, "//table/tbody/tr")
+                rows <- lapply(rows, function(r) { xml2::xml_text(xml2::xml_children(r)) })
+                rows <- rows[sapply(rows, length) >= 5]
                 
+                if (length(rows) == 0) break
+
                 totalrows <- c(totalrows, rows)
                 page <- page + 1
             }
@@ -500,44 +451,21 @@ function(Symbols,env,return.class='xts',index.class="Date",
             # Available columns
             cols <- c('Open','High','Low','Close','Volume','Adjusted')
             
-            firstrow <- totalrows[[1]]
-            cells <- xml2::xml_find_all(firstrow, "th")
-            if (length(cells) == 5) cols <- cols[-(5:6)]
+            # Handle date + OHLC, when date + OHLCVA isn't returned
+            if (length(totalrows[[1]]) == 5) {
+              cols <- cols[-(5:6)]
+            }
 
             # Process from the start, for easier stocksplit management
             totalrows <- rev(totalrows)
-            mat <- matrix(0, ncol=length(cols) + 1, nrow=0, byrow=TRUE)
-            for(row in totalrows) {
-                cells <- xml2::xml_find_all(row, "td")
-                
-                # 2 cells means it is a stocksplit row
-                # So extract stocksplit data and recalculate the matrix we have so far
-                if (length(cells) == 2 && length(cols) == 6 & nrow(mat) > 1) {
-                    ss.data <- as.numeric(na.omit(as.numeric(unlist(strsplit(xml2::xml_text(cells[[2]]), "[^0-9]+")))))
-                    factor <- ss.data[2] / ss.data[1]
-                    
-                    mat <- rbind(t(apply(mat[-nrow(mat),], 1, function(x) {
-                        x * c(1, rep(1/factor, 4), factor, 1)
-                    })), mat[nrow(mat),])
-                }
-                
-                if (length(cells) != length(cols) + 1) next
-                
-                # Parse the Japanese date format using UTF characters
-                # \u5e74 = "year"
-                # \u6708 = "month"
-                # \u65e5 = "day"
-                date <- as.Date(xml2::xml_text(cells[[1]]), format="%Y\u5e74%m\u6708%d\u65e5")
-                entry <- c(date)
-                for(n in 2:length(cells)) {
-                    entry <- cbind(entry, as.numeric(gsub(",", "", xml2::xml_text(cells[[n]]))))
-                }
-                
-                mat <- rbind(mat, entry)
-            }
-            
-            fr <- xts(mat[, -1], as.Date(mat[, 1]), src="yahooj", updated=Sys.time())
-            
+
+            mat <- do.call(rbind, totalrows)
+
+            dates <- as.Date(mat[,1], format="%Y\u5e74%m\u6708%d\u65e5")
+            ohlc <- gsub(",", "", mat[,-1], fixed = TRUE)
+            storage.mode(ohlc) <- "numeric"  # convert from character to number
+
+            fr <- xts(ohlc, dates, src="yahooj", updated=Sys.time())
             colnames(fr) <- paste(symname, cols, sep='.')
             
             fr <- convert.time.series(fr=fr,return.class=return.class)
@@ -755,7 +683,7 @@ function(Symbols,env,return.class='xts',
        if(verbose) cat("downloading ",Symbols[[i]],".....\n\n")
        test <- try({
        URL <- paste(FRED.URL, "/", Symbols[[i]], "/downloaddata/", Symbols[[i]], ".csv", sep="")
-       fr <- read.csv(curl::curl(URL),na.string=".")
+       fr <- read.csv(curl::curl(URL),na.strings=".")
 
        if(verbose) cat("done.\n")
        fr <- xts(as.matrix(fr[,-1]),
@@ -1480,7 +1408,6 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
                               adjust=FALSE,
                               from='2007-01-01',
                               to=Sys.Date(),
-                              data.type="json",
                               ...) {
   
   importDefaults("getSymbols.tiingo")
@@ -1520,62 +1447,32 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
     if (verbose) cat("loading", sym.name, ".....")
     from.strftime <- strftime(from, format = "%Y-%m-%d")
     to.strftime <- strftime(to, format = "%Y-%m-%d")
-    
-    tiingo.names <- c("open", "high", "low", "close", "volume",
-                      "adjOpen", "adjHigh", "adjLow", "adjClose",
-                      "adjVolume", "divCash", "splitFactor")
-    qm.names <- paste(sym, c("Open", "High", "Low", "Close", "Volume",
-                             "Open", "High", "Low", "Close", "Volume",
-                             "DivCash", "SplitFactor"), sep=".")
-    if (isTRUE(adjust)) {
-      return.columns <- tiingo.names[6:10]
-    } else {
-      return.columns <- tiingo.names[1:5]
-    }
-    URL <- paste0("https://api.tiingo.com/tiingo/",
-                  periodicity, "/",
+
+    URL <- paste0("https://api.tiingo.com/tiingo/daily/",
                   sym.name, "/prices",
                   "?startDate=", from.strftime,
                   "&endDate=", to.strftime,
-                  "&format=", data.type,
-                  "&columns=", paste0(return.columns, collapse=","))
-    # If rate limit is hit, the csv API returns HTTP 200 (OK), while json API
-    # returns HTTP 429. The latter caused download.file() to error, but the
-    # contents of 'tmp' still contain the error message.
-    h <- curl::new_handle()
-    curl::handle_setheaders(h, Authorization = paste("Token", api.key))
-    response <- curl::curl_fetch_memory(URL, h)
-    response.data <- rawToChar(response$content)
-
-    if (data.type == "json") {
-      stock.data <- jsonlite::fromJSON(response.data)
-      if (verbose) cat("done.\n")
-    } else {
-      stock.data <- read.csv(text=response.data, as.is=TRUE)
-    }
+                  "&resampleFreq=", periodicity,
+                  "&format=csv",
+                  "&token=", api.key)
+    #tiingo will return a text error for ticker not found, which read.csv converts
+    #to a zero row, 1 column data.frame, with a warning
+    stock.data <- suppressWarnings(read.csv(URL, as.is=TRUE))
     # check for error
-    if (!all(return.columns %in% names(stock.data))) {
-      if (data.type == "json") {
-        msg <- stock.data$detail
-      } else {
-        msg <- readLines(response.data, warn=FALSE)
-      }
-      msg <- sub("Error: ", "", msg)
+    if (NCOL(stock.data) == 1) {
+      msg <- sub("Error: ", "", colnames(stock.data))
       stop(msg, call. = FALSE)
     }
-    tm.stamps <- as.POSIXct(stock.data[, "date"], ...)
-    stock.data[, "date"] <- NULL
+    
+    tm.stamps <- as.Date(stock.data[, "date"])
 
-    # adjusted column names
-    adjcols <- grepl("^adj", colnames(stock.data))
-    # order Tiingo column names before converting to quantmod names
-    stock.data <- OHLCV(stock.data)
-    if (any(adjcols)) {
-      # put adjusted columns last
-      stock.data <- stock.data[, c(which(!adjcols), which(adjcols))]
+    if (adjust) {
+      stock.data <- stock.data[, c("adjOpen", "adjHigh", "adjLow", "adjClose", "adjVolume")]
+      colnames(stock.data) <- paste(sym, c("Open", "High", "Low", "Close", "Volume"), sep=".")
+    } else {
+      stock.data <- stock.data[, c("open", "high", "low", "close", "volume", "adjClose")]
+      colnames(stock.data) <- paste(sym, c("Open", "High", "Low", "Close", "Volume", "Adjusted"), sep=".")
     }
-    # now convert to quantmod column names
-    colnames(stock.data) <- qm.names[match(colnames(stock.data), tiingo.names)]
 
     # convert data to xts
     xts.data <- xts(stock.data, tm.stamps, src="tiingo", updated=Sys.time())

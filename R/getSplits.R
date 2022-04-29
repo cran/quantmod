@@ -5,8 +5,18 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
 
   # Function written by Joshua Ulrich, using
   # getSymbols.yahoo as a guide.
-  if(missing(env))
+  tmp.symbol <- Symbol
+  if(missing(env)) {
     env <- parent.frame(1)
+  } else {
+    if(exists(Symbol, envir = env, inherits = FALSE)) {
+      tmp.symbol <- get(Symbol, envir = env)
+    }
+    if(!missing(auto.assign) && !isTRUE(auto.assign) && !is.null(env)) {
+      warning("ignoring 'auto.assign = FALSE' because 'env' is specified")
+    }
+    auto.assign <- TRUE
+  }
   if(is.null(env))
     auto.assign <- FALSE
   Symbol.name <- ifelse(!is.character(Symbol),
@@ -17,10 +27,9 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
   to.posix <- .dateToUNIX(to)
 
   handle <- .getHandle()
-  yahoo.URL <- .yahooURL(Symbol.name, from.posix, to.posix,
-                         "1d", "split", handle)
+  yahoo.URL <- .yahooURL(Symbol.name, from.posix, to.posix, "1d", "split")
 
-  conn <- curl::curl(yahoo.URL, handle=handle$ch)
+  conn <- curl::curl(yahoo.URL, handle=handle)
   fr <- try(read.csv(conn, as.is=TRUE), silent=TRUE)
 
   if (inherits(fr, "try-error")) {
@@ -36,10 +45,10 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
     colnames(fr) <- paste(Symbol.name,'spl',sep='.')
   }
 
-  if(is.xts(Symbol)) {
+  if(is.xts(tmp.symbol)) {
     if(auto.update) {
-      xtsAttributes(Symbol) <- list(splits=fr)
-      assign(Symbol.name,Symbol,envir=env)
+      xtsAttributes(tmp.symbol) <- list(splits=fr)
+      assign(Symbol.name,tmp.symbol,envir=env)
     }
   } else if(auto.assign) {
       assign(paste(Symbol.name,'spl',sep='.'),fr,envir=env)
