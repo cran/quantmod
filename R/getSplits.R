@@ -27,22 +27,29 @@ function(Symbol,from='1970-01-01',to=Sys.Date(),env=parent.frame(),src='yahoo',
   to.posix <- .dateToUNIX(to)
 
   handle <- .getHandle()
-  yahoo.URL <- .yahooURL(Symbol.name, from.posix, to.posix, "1d", "split")
+  yahoo.URL <- .yahooJsonURL(Symbol.name, from.posix, to.posix, "1d")
+  yahoo.URL <- paste0(yahoo.URL, "&events=splits")
 
-  conn <- curl::curl(yahoo.URL, handle=handle)
-  fr <- try(read.csv(conn, as.is=TRUE), silent=TRUE)
+  conn <- curl::curl(yahoo.URL,handle=handle)
+  json <- try(jsonlite::fromJSON(conn, simplifyVector = FALSE)$chart$result, silent = TRUE)
 
-  if (inherits(fr, "try-error")) {
-    fr <- retry.yahoo(Symbol.name, from.posix, to.posix, "1d", "split", conn)
+  if(inherits(json, "try-error")) {
+    msg <- paste0("Unable to import splits for ", Symbol.name,
+                  ".\n", attr(json, "condition")$message)
+    stop(msg)
   }
 
-  if(NROW(fr)==0) {
-    fr <- NA
-  } else {
-    fr[,2] <- gsub(":", "/", fr[,2], fixed = TRUE)
-    fr$V3 <- 1 / vapply(parse(text=fr[,2]), eval, numeric(1))
-    fr <- xts(fr$V3, as.Date(fr[,1], "%Y-%m-%d"))
+  split.events <- json[[1]][["events"]][["splits"]]
+
+  if(!is.null(split.events)) {
+    to.xts <- function(x) {
+      ratio <- x$numerator/x$denominator
+      xts(ratio, as.Date(.POSIXct(x$date, "UTC")))
+    }
+    fr <- 1 / do.call(rbind, lapply(split.events, to.xts))
     colnames(fr) <- paste(Symbol.name,'spl',sep='.')
+  } else {
+    fr <- xts(numeric(0), .Date(integer(0)))
   }
 
   if(is.xts(tmp.symbol)) {

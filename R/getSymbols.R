@@ -217,15 +217,12 @@ formals(loadSymbols) <- loadSymbols.formals
   return(h)
 }
 
-.yahooURL <-
-function(symbol, from, to, period, type)
+.yahooJsonURL <-
+function(symbol, from, to, interval)
 {
-  p <- match.arg(period, c("1d", "1wk", "1mo"))
-  e <- match.arg(type, c("history", "div", "split"))
-  n <- if (unclass(Sys.time()) %% 1L >= 0.5) 1L else 2L
-  u <- paste0("https://query", n, ".finance.yahoo.com/v7/finance/download/",
-              symbol, sprintf("?period1=%.0f&period2=%.0f", from, to),
-              "&interval=", p, "&events=", e)
+  u <- paste0("https://query2.finance.yahoo.com/v8/finance/chart/",
+              symbol,
+              sprintf("?period1=%.0f&period2=%.0f&interval=%s", from, to, interval))
   return(u)
 }
 
@@ -292,22 +289,21 @@ function(Symbols,env,return.class='xts',index.class="Date",
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        if(verbose) cat("downloading ",Symbols.name,".....\n\n")
 
-       yahoo.URL <- .yahooURL(Symbols.name, from.posix, to.posix,
-                              interval, "history")
+       yahoo.URL <- .yahooJsonURL(Symbols.name, from.posix, to.posix, interval)
        conn <- curl::curl(yahoo.URL, handle = handle)
-       fr <- try(read.csv(conn, na.strings="null"), silent = TRUE)
+       y <- try(jsonlite::fromJSON(conn)$chart$result, silent = TRUE)
 
-       if (inherits(fr, "try-error")) {
-         fr <- retry.yahoo(Symbols.name, from.posix, to.posix, interval,
-                           "history", conn, curl.options = curl.options,
-                           na.strings = NULL)
-       }
+       ohlcv <- unlist(y$indicators$quote[[1]], recursive = FALSE)
+       idx <- as.Date(.POSIXct(y$timestamp[[1]]))
+       x <- xts(do.call(cbind, ohlcv), idx,
+                 src='yahoo', updated=Sys.time())
 
-       if(verbose) cat("done.\n")
-       fr <- xts(as.matrix(fr[,-1]),
-                 as.Date(fr[,1]),
-                 #as.POSIXct(fr[,1], tz=Sys.getenv("TZ")),
-                 src='yahoo',updated=Sys.time())
+       fr <- merge(OHLCV(x), adjusted = unlist(y$indicators$adjclose))
+
+       # convert column names to Initial Capitalization
+       cn <- colnames(fr)
+       substring(cn, 1, 1) <- toupper(substring(cn, 1, 1))
+       colnames(fr) <- cn
 
        # warn about missing values
        if (any(is.na(fr))) {
@@ -333,12 +329,10 @@ function(Symbols,env,return.class='xts',index.class="Date",
          tclass(fr) <- index.class
 
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+       returnSym[[i]] <- gsub('\\^', '', returnSym[[i]])
+
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
-       if(i >= 5 && length(Symbols) > 5) {
-         message("pausing 1 second between requests for more than 5 symbols")
-         Sys.sleep(1)
-       }
        }, silent = TRUE)
        if (inherits(test, "try-error")) {
          msg <- paste0("Unable to import ", dQuote(returnSym[[i]]),
@@ -674,6 +668,9 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg("verbose")) verbose <- FALSE
      if(!hasArg("auto.assign")) auto.assign <- TRUE
+     if(!hasArg("from")) from <- ""
+     if(!hasArg("to")) to <- ""
+
      FRED.URL <- "https://fred.stlouisfed.org/series"
 
      returnSym <- Symbols
@@ -691,6 +688,9 @@ function(Symbols,env,return.class='xts',
                  src='FRED',updated=Sys.time())
        dim(fr) <- c(NROW(fr),1)
        colnames(fr) <- as.character(toupper(Symbols[[i]]))
+       # subset between from/to dates before we convert from xts
+       fr <- fr[paste(from, to, sep = "/")]
+
        fr <- convert.time.series(fr=fr,return.class=return.class)
        Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
        if(auto.assign)
