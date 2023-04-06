@@ -291,7 +291,11 @@ function(Symbols,env,return.class='xts',index.class="Date",
 
        yahoo.URL <- .yahooJsonURL(Symbols.name, from.posix, to.posix, interval)
        conn <- curl::curl(yahoo.URL, handle = handle)
-       y <- try(jsonlite::fromJSON(conn)$chart$result, silent = TRUE)
+       y <- jsonlite::fromJSON(conn)
+       if (is.null(y$chart) || is.null(y$chart$result)) {
+         stop("no data for", Symbols.name)
+       }
+       y <- y$chart$result
 
        ohlcv <- unlist(y$indicators$quote[[1]], recursive = FALSE)
        idx <- as.Date(.POSIXct(y$timestamp[[1]]))
@@ -1099,8 +1103,6 @@ function(Symbols,env,return.class='xts',
          from=Sys.Date()-179,
          to=Sys.Date(),
          ...) {
-     if(!requireNamespace("jsonlite", quietly=TRUE))
-       stop("package:",dQuote("jsonlite"),"cannot be loaded.")
 
      importDefaults("getSymbols.oanda")
      this.env <- environment()
@@ -1229,11 +1231,6 @@ getSymbols.av <- function(Symbols, env, api.key,
   
   default.return.class <- return.class
   default.periodicity <- periodicity
-  
-  if (!requireNamespace("jsonlite", quietly=TRUE)) {
-    stop("getSymbols.av: Package", dQuote("jsonlite"), "is required but",
-         " cannot be loaded.", call.=FALSE)
-  }
   
   #
   # For daily, weekly, and monthly data, timestamps are "yyyy-mm-dd".
@@ -1428,11 +1425,6 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
   periodicity <- match.arg(periodicity, valid.periodicity)
   default.return.class <- return.class
   default.periodicity <- periodicity
-  
-  if (!requireNamespace("jsonlite", quietly=TRUE)) {
-    stop("getSymbols.tiingo: Package", dQuote("jsonlite"), "is required but",
-         " cannot be loaded.", call.=FALSE)
-  }
   
   downloadOne <- function(sym, default.return.class, default.periodicity) {
     

@@ -1,6 +1,6 @@
-b882588c57cf8c86c48d89aac0cdf9c1 *DESCRIPTION
+a421cf41e07848ed3bd3eacc4a9fd6eb *DESCRIPTION
 22cc04243961ccafedd30241ff570d63 *NAMESPACE
-fa43e602aa527ffc04f30c4cc55c753a *NEWS.md
+0590bb2d3a6c4d058431b87b3f6c70f2 *NEWS.md
 02d0bc2c534d9628859ba7bf5a4a1357 *R/Defaults.R
 28bc874ed43d29054b82d8447d77aede *R/OHLC.transformations.R
 3eb6c31d57d927394ac1732823b7e519 *R/Price.transformations.R
@@ -37,11 +37,11 @@ cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
 0f696a431bcf76bc6be9d7c69c6ae222 *R/getDividends.R
 9da14edfa7993e67759d3c83a24282de *R/getFinancials.R
 77a7874285b76b27046f556ef1dfd00b *R/getModelData.R
-22241b246bfde660d0b6c5f1655d1449 *R/getOptionChain.R
-260c54f20c74321fd3ebb4af40fc89bf *R/getOptionChain.orats.R
+f524584fc46eb830e86725435ed73cfa *R/getOptionChain.R
+2a7b0e191c145ed1bfb29d33d318e4f1 *R/getOptionChain.orats.R
 96674bf333f5cc43073fdad59a79eb19 *R/getQuote.R
 5c7a8ea96304a5c9b28dfcfe339ca036 *R/getSplits.R
-4f999b8d3c00d02b670c959ea3d93999 *R/getSymbols.R
+050812edc622e51618ae5529bf56d585 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
 ce5eaff302ecf73b9767a2f8446f9ae8 *R/loadSymbols.R
 d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
@@ -66,7 +66,7 @@ d278a4eb9201362be8b7475b73cf710b *R/tradeLog.R
 0c99badd6fea917d849505328953cc7d *R/updateModel.R
 efea22ce21431595d7d7f76bd8dfa5ae *R/zoomChart.R
 6bd4a0bda6fe3a18a7764308607376d5 *R/zzz.R
-62cacd3a47ba55e8f1a38cec6ec4c814 *build/partial.rdb
+2f03185ba9f385e352e884179358a515 *build/partial.rdb
 512fd036a11aafe3d7e82c8b045baf63 *demo/00Index
 f0f55a8e00e795c94275d57d4cd09aa1 *demo/chartSeries.R
 45f126715a150a9cd1198721f2afd1d9 *man/Defaults.Rd
