@@ -1,6 +1,6 @@
-a421cf41e07848ed3bd3eacc4a9fd6eb *DESCRIPTION
+b84ad8eafea06c51575ae7915b382e19 *DESCRIPTION
 22cc04243961ccafedd30241ff570d63 *NAMESPACE
-0590bb2d3a6c4d058431b87b3f6c70f2 *NEWS.md
+0df4879da27b15119033e2f95b211017 *NEWS.md
 02d0bc2c534d9628859ba7bf5a4a1357 *R/Defaults.R
 28bc874ed43d29054b82d8447d77aede *R/OHLC.transformations.R
 3eb6c31d57d927394ac1732823b7e519 *R/Price.transformations.R
@@ -30,7 +30,7 @@ dd80570b5f18aa4aeab9a3ca6c832e97 *R/attachSymbols.R
 6767384c2917d19a199aa6b287581c7b *R/buildModel.methods.R
 fc284e92a5bd1685aeb362bd42022e34 *R/chartSeries.R
 62597d41261ae3390f0d0ffe6c120738 *R/chartSeries.chob.R
-187d6b260ce542b8cbe28df97d26e6b2 *R/chart_Series.R
+a8dd6f45e5abb3c8a0d7c2a5c8e06057 *R/chart_Series.R
 22cdae299dafdc7504d77863a19f7996 *R/chob.R
 0ff2ddb2c87969047fab8880c5321d58 *R/dropTA.R
 cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
@@ -39,7 +39,7 @@ cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
 77a7874285b76b27046f556ef1dfd00b *R/getModelData.R
 f524584fc46eb830e86725435ed73cfa *R/getOptionChain.R
 2a7b0e191c145ed1bfb29d33d318e4f1 *R/getOptionChain.orats.R
-96674bf333f5cc43073fdad59a79eb19 *R/getQuote.R
+11f78f8d6ea056028492264365f709c6 *R/getQuote.R
 5c7a8ea96304a5c9b28dfcfe339ca036 *R/getSplits.R
 050812edc622e51618ae5529bf56d585 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
@@ -66,7 +66,7 @@ d278a4eb9201362be8b7475b73cf710b *R/tradeLog.R
 0c99badd6fea917d849505328953cc7d *R/updateModel.R
 efea22ce21431595d7d7f76bd8dfa5ae *R/zoomChart.R
 6bd4a0bda6fe3a18a7764308607376d5 *R/zzz.R
-2f03185ba9f385e352e884179358a515 *build/partial.rdb
+946449ae1c729044cf7ff1250fba4980 *build/partial.rdb
 512fd036a11aafe3d7e82c8b045baf63 *demo/00Index
 f0f55a8e00e795c94275d57d4cd09aa1 *demo/chartSeries.R
 45f126715a150a9cd1198721f2afd1d9 *man/Defaults.Rd
@@ -93,7 +93,7 @@ af0d6faa51111906f86d4f0e411ce376 *man/adjustOHLC.Rd
 0b95c00314f7ca1fd72db99a96036318 *man/buildModel.Rd
 53fbcc24d2bacd21ac5ca1bcd259de78 *man/chartSeries.Rd
 f6ecbe40cc1c8501a46eface69a79ac1 *man/chartTheme.Rd
-6c5db640af9682cf1fb22d809387d9ad *man/chart_Series.Rd
+630e726fcb19510ef178bf6604b402b3 *man/chart_Series.Rd
 45aa329f141b84b459e82b5a04bc419d *man/chob-class.Rd
 02e34554a4a332f39d9ef26a2439b1df *man/chobTA-class.Rd
 45dcdf455ab5322c9f5f49af1fd919ec *man/create.binding.Rd

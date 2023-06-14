@@ -175,7 +175,7 @@ chart_pars <- function() {
 #  original quantmod:::chartSeries, except the
 #  undesireable ones.
 chart_Series <- function(x, 
-                         name=deparse(substitute(x)), 
+                         name=NULL,
                          type="candlesticks", 
                          subset="", 
                          TA="",
@@ -306,7 +306,11 @@ chart_Series <- function(x,
                 labels=names(axt), #axTicksByTime(xdata[xsubset],format.labels=format.labels)),
                 las=1,lwd.ticks=1,mgp=c(3,1.5,0),tcl=-0.4,cex.axis=.9)),
          expr=TRUE)
+  if(is.null(name)) {
+    name <- deparse(substitute(x))
+  }
   cs$Env$name <- name
+
   text.exp <- c(expression(text(1-1/3,0.5,name,font=2,col='#444444',offset=0,cex=1.1,pos=4)),
                 expression(text(NROW(xdata[xsubset]),0.5,
                            paste(start(xdata[xsubset]),end(xdata[xsubset]),sep=" / "),
@@ -406,10 +410,32 @@ use.chob <- function(use=TRUE) {
 new_ta <- function(FUN, preFUN, postFUN, on=NA, ...) {}
 
 # add_Series {{{
-add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", theme=NULL,...) { 
+add_Series <-
+function(x,
+         type = "candlesticks",
+         order = NULL,
+         on = NA,
+         name = NULL,
+         theme = NULL,
+         ...)
+{
   lenv <- new.env()
-  lenv$name <- deparse(substitute(x))
-  lenv$plot_series <- function(x, series, type, ...) {
+
+  if(is.null(name) || isTRUE(name == "auto")) {
+    # Checking for `name == "auto"` handles the case where the user explicitly
+    # provided "auto" for the 5th argument. The 5th argument used to be
+    # `legend = "auto"`, but only "auto" was supported.
+    name <- deparse(substitute(x))
+  }
+  lenv$name <- name
+
+  lenv$plot_series <- function(x, series, type, ..., legend = NULL) {
+    # The 'legend = NULL` argument was added to remove `legend` from `...` to
+    # suppress this warning:
+    ##    Warning message:
+    ##    In plot.xy(xy.coords(x, y), type = type, ...) :
+    ##      "legend" is not a graphical parameter
+
     # vertical grid lines
     if(FALSE) theme <- NULL
     segments(axTicksByTime2(xdata[xsubset]),
@@ -424,8 +450,8 @@ add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", 
   lenv$xdata <- x
   # map all passed args (if any) to 'lenv' environment
   mapply(function(name,value) { assign(name,value,envir=lenv) }, 
-        names(list(x=x,type=type,order=order,on=on,legend=legend,...)),
-              list(x=x,type=type,order=order,on=on,legend=legend,...))
+        names(list(x=x,type=type,order=order,on=on,...)),
+              list(x=x,type=type,order=order,on=on,...))
   exp <- parse(text=gsub("list","plot_series",
                as.expression(substitute(list(x=current.chob(),type=type,series=get("x"), ...)))),
                srcfile=NULL)
@@ -476,12 +502,33 @@ add_Series <- function(x, type="candlesticks",order=NULL, on=NA, legend="auto", 
   plot_object
 } #}}}
 # add_TA {{{
-add_TA <- function(x, order=NULL, on=NA, legend="auto",
-                   yaxis=list(NULL,NULL),
-                   col=1, taType=NULL, ...) { 
+add_TA <-
+function(x,
+         order = NULL,
+         on = NA,
+         name = NULL,
+         yaxis = list(NULL, NULL),
+         col = 1,
+         taType = NULL,
+         ...)
+{
   lenv <- new.env()
-  lenv$name <- deparse(substitute(x))
-  lenv$plot_ta <- function(x, ta, on, taType, col=col,...) {
+
+  if(is.null(name) || isTRUE(name == "auto")) {
+    # Checking for `name == "auto"` handles the case where the user explicitly
+    # provided "auto" for the 4th argument. The 4th argument used to be
+    # `legend = "auto"`, but only "auto" was supported.
+    name <- deparse(substitute(x))
+  }
+  lenv$name <- name
+
+  lenv$plot_ta <- function(x, ta, on, taType, col=col, ..., legend=NULL) {
+    # The 'legend = NULL` argument was added to remove `legend` from `...` to
+    # suppress this warning:
+    ##    Warning message:
+    ##    In plot.xy(xy.coords(x, y), type = type, ...) :
+    ##      "legend" is not a graphical parameter
+
     xdata <- x$Env$xdata
     xsubset <- x$Env$xsubset
     if(all(is.na(on))) {
@@ -512,9 +559,9 @@ add_TA <- function(x, order=NULL, on=NA, legend="auto",
   lenv$xdata <- x
   # map all passed args (if any) to 'lenv' environment
   mapply(function(name,value) { assign(name,value,envir=lenv) }, 
-        names(list(x=x,order=order,on=on,legend=legend,
+        names(list(x=x,order=order,on=on,
                    taType=taType,col=col,...)),
-              list(x=x,order=order,on=on,legend=legend,
+              list(x=x,order=order,on=on,
                    taType=taType,col=col,...))
   exp <- parse(text=gsub("list","plot_ta",
                as.expression(substitute(list(x=current.chob(),
