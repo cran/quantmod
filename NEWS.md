@@ -1,3 +1,8 @@
+### Changes in 0.4.24 (2023-07-17)
+
+1. Fix `getSymbols.oanda()` URL. Thanks to @macray76 for the report.
+    [#387](https://github.com/joshuaulrich/quantmod/issues/387)
+
 ### Changes in 0.4.23 (2023-06-14)
 
 1. Fix `getQuote.yahoo()` error. Thanks to Ethan B. Smith for the report and
