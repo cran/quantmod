@@ -71,6 +71,21 @@ function(Symbols=NULL,
                              Symbols[Symbols==x]
                            }
                            )))
+        # are any symbols reserved words?
+        if(getOption("quantmod.warn.ticker.reserved.word", TRUE)) {
+          reserved.tickers <- c("NA", "TRUE")
+          is.reserved <- reserved.tickers %in% names(Symbols)
+          if(any(is.reserved)) {
+            rtk <- paste(reserved.tickers[is.reserved], collapse = ", ")
+            if (sum(is.reserved) > 1) {
+              msg <- paste("tickers", rtk, "are reserved words")
+            } else {
+              msg <- paste("ticker", rtk, "is a reserved word")
+            }
+            warning(msg, " and must be back-quoted to be used (e.g. `NA`).")
+          }
+        }
+
         # was getSymbols() called with more than 1 symbol?
         .has1sym. <- length(Symbols) < 2L
         #Symbols <- as.list(Symbols)
@@ -87,7 +102,7 @@ function(Symbols=NULL,
                                            .has1sym.=.has1sym.))
           if(!auto.assign)
             return(symbols.returned)
-          for(each.symbol in symbols.returned) all.symbols[[each.symbol]] <- symbol.source 
+          for(each.symbol in symbols.returned) all.symbols[[each.symbol]] <- symbol.source
         }
         req.symbols <- names(all.symbols)
         all.symbols <- c(all.symbols,old.Symbols)[unique(names(c(all.symbols,old.Symbols)))]
@@ -253,11 +268,17 @@ function(Symbols,env,return.class='xts',index.class="Date",
      default.from <- from
      default.to <- to
 
-     intervals <- c(daily = "1d", weekly = "1wk", monthly = "1mo")
+     mins <- c(1, 2, 5, 15, 30, 60, 90)
+     min_vals <- paste0(rep(mins, 2), "m")
+     names(min_vals) <- c(paste0(mins, "minutes"), paste0(mins, " minutes"))
+
+     intervals <- c(daily = "1d", weekly = "1wk", monthly = "1mo", hourly = "1h", min_vals)
+
      default.periodicity <- match.arg(periodicity, names(intervals))
 
      if(!hasArg("verbose")) verbose <- FALSE
      if(!hasArg("auto.assign")) auto.assign <- TRUE
+     if(!hasArg("warnings")) warnings <- TRUE
 
      handle <- .getHandle(curl.options)
 
@@ -277,10 +298,27 @@ function(Symbols,env,return.class='xts',index.class="Date",
          stop("periodicity must be one of: ", paste(intervals, collapse=", "))
        interval <- intervals[p]
 
+       is.intraday <- !(interval %in% c("1d", "1wk", "1mo"))
+
        from <- getSymbolLookup()[[Symbols[[i]]]]$from
        from <- if(is.null(from)) default.from else from
        to <- getSymbolLookup()[[Symbols[[i]]]]$to
        to <- if(is.null(to)) default.to else to
+
+       if(is.intraday) {
+         from.date <- as.Date(from)
+         to.date <- as.Date(to)
+         n.days <- difftime(time1 = to.date, time2 = from.date, units = "days")
+         if(n.days > 7) {
+           from <- to.date - 7
+           if(warnings) {
+             warning(paste0(
+               "Only a maximum of 7 days is allowed for querying intraday data",
+               "data from 'yahoo'. Setting `from` to '", from, "'."
+             ), call. = FALSE)
+           }
+         }
+       }
 
        from.posix <- .dateToUNIX(from)
        to.posix <- .dateToUNIX(to)
@@ -298,11 +336,22 @@ function(Symbols,env,return.class='xts',index.class="Date",
        y <- y$chart$result
 
        ohlcv <- unlist(y$indicators$quote[[1]], recursive = FALSE)
-       idx <- as.Date(.POSIXct(y$timestamp[[1]]))
+
+       tz <- y$meta$exchangeTimezoneName
+       idx <- .POSIXct(y$timestamp[[1]], tz = tz)
+       if (!is.intraday) {
+         idx <- as.Date(idx)
+       }
+
        x <- xts(do.call(cbind, ohlcv), idx,
                  src='yahoo', updated=Sys.time())
 
-       fr <- merge(OHLCV(x), adjusted = unlist(y$indicators$adjclose))
+       fr <- OHLCV(x)
+       cnames <- c("Open", "High", "Low", "Close", "Volume")
+       if (!is.intraday) {
+         fr <- merge(fr, adjusted = unlist(y$indicators$adjclose))
+         cnames <- c(cnames, "Adjusted")
+       }
 
        # convert column names to Initial Capitalization
        cn <- colnames(fr)
@@ -310,7 +359,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
        colnames(fr) <- cn
 
        # warn about missing values
-       if (any(is.na(fr))) {
+       if (any(is.na(fr)) && isTRUE(warnings)) {
          warning(Symbols.name, " contains missing values. Some functions will",
                  " not work if objects contain missing values in the middle",
                  " of the series. Consider using na.omit(), na.approx(),",
@@ -318,7 +367,6 @@ function(Symbols,env,return.class='xts',index.class="Date",
        }
 
        # re-order column names and prefix with symbol
-       cnames <- c("Open", "High", "Low", "Close", "Volume", "Adjusted")
        corder <- pmatch(substr(cnames, 1, 3), colnames(fr))
        fr <- fr[,corder]
        colnames(fr) <- paste(toupper(gsub("\\^","",Symbols.name)), cnames, sep=".")
@@ -329,10 +377,13 @@ function(Symbols,env,return.class='xts',index.class="Date",
        }
 
        fr <- convert.time.series(fr=fr,return.class=return.class)
-       if(is.xts(fr))
-         tclass(fr) <- index.class
+       if(is.xts(fr)) {
+         if(!is.intraday) {
+           tclass(fr) <- index.class
+         }
+       }
 
-       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+       Symbols[[i]] <- toupper(gsub('\\^','',Symbols[[i]]))
        returnSym[[i]] <- gsub('\\^', '', returnSym[[i]])
 
        if(auto.assign)
@@ -344,7 +395,9 @@ function(Symbols,env,return.class='xts',index.class="Date",
          if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
            stop(msg)
          }
-         warning(msg, call. = FALSE, immediate. = TRUE)
+         if (isTRUE(warnings)) {
+           warning(msg, call. = FALSE, immediate. = TRUE)
+         }
          noDataSym <- c(noDataSym, returnSym[[i]])
        }
      }
@@ -369,13 +422,14 @@ function(Symbols,env,return.class='xts',index.class="Date",
         }
         if(!hasArg("adjust"))
             adjust <- FALSE
-        
+
         default.return.class <- return.class
         default.from <- from
         default.to <- to
-        
+
         if(!hasArg("verbose")) verbose <- FALSE
         if(!hasArg("auto.assign")) auto.assign <- TRUE
+        if(!hasArg("warnings")) warnings <- TRUE
 
         if(!requireNamespace("xml2", quietly=TRUE))
           stop("package:",dQuote("xml2"),"cannot be loaded.")
@@ -390,11 +444,11 @@ function(Symbols,env,return.class='xts',index.class="Date",
             # variable name. It needs to start with YJ, and it will be appended
             # if it does not.
             symname <- toupper(Symbols[[i]])
-            
+
             # The symbol actually sent to Yahoo Japan. This is without the
             # starting YJ bit.
             symbol <- symname
-            
+
             # If it starts with YJ, try looking up defaults
             if (grepl("^YJ", symname)) {
                 return.class <- getSymbolLookup()[[symname]]$return.class
@@ -404,25 +458,25 @@ function(Symbols,env,return.class='xts',index.class="Date",
                 from <- if(is.null(from)) default.from else from
                 to <- getSymbolLookup()[[symname]]$to
                 to <- if(is.null(to)) default.to else to
-                
+
                 # Extract the actual symbol to be sent to Yahoo Japan
                 symbol <- substring(symname, 3)
             } else {
                 return.class <- default.return.class
                 from <- default.from
                 to <- default.to
-                
+
                 # Prepend 'YJ' to the symbol and store it in symname
                 symname <- paste('YJ', symbol, sep="")
             }
 
             from.str <- format(as.Date(from), "%Y%m%d")
             to.str <- format(as.Date(to), "%Y%m%d")
-            
+
             Symbols.name <- getSymbolLookup()[[symname]]$name
             Symbols.name <- ifelse(is.null(Symbols.name),symbol,Symbols.name)
             if(verbose) cat("downloading ",Symbols.name,".....\n\n")
-            
+
             page <- 1
             totalrows <- c()
             while (TRUE) {
@@ -434,21 +488,21 @@ function(Symbols,env,return.class='xts',index.class="Date",
                 rows <- xml2::xml_find_all(fdoc, "//table/tbody/tr")
                 rows <- lapply(rows, function(r) { xml2::xml_text(xml2::xml_children(r)) })
                 rows <- rows[sapply(rows, length) >= 5]
-                
+
                 if (length(rows) == 0) break
 
                 totalrows <- c(totalrows, rows)
                 page <- page + 1
             }
             if(verbose) cat("done.\n")
-            
+
             if (is.null(rows)) {
               stop("No historical data for ", dQuote(Symbols[[i]]), ".")
             }
 
             # Available columns
             cols <- c('Open','High','Low','Close','Volume','Adjusted')
-            
+
             # Handle date + OHLC, when date + OHLCVA isn't returned
             if (length(totalrows[[1]]) == 5) {
               cols <- cols[-(5:6)]
@@ -465,11 +519,11 @@ function(Symbols,env,return.class='xts',index.class="Date",
 
             fr <- xts(ohlc, dates, src="yahooj", updated=Sys.time())
             colnames(fr) <- paste(symname, cols, sep='.')
-            
+
             fr <- convert.time.series(fr=fr,return.class=return.class)
             if(is.xts(fr))
                 tclass(fr) <- index.class
-            
+
             Symbols[[i]] <- symname
             if(auto.assign)
                 assign(Symbols[[i]],fr,env)
@@ -477,7 +531,7 @@ function(Symbols,env,return.class='xts',index.class="Date",
                 message("pausing 1 second between requests for more than 5 symbols")
                 Sys.sleep(1)
             }
-            
+
             }, silent = TRUE)
             if (inherits(test, "try-error")) {
                 msg <- paste0("Unable to import ", dQuote(returnSym[[i]]),
@@ -485,7 +539,9 @@ function(Symbols,env,return.class='xts',index.class="Date",
                 if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
                   stop(msg)
                 }
-                warning(msg, call. = FALSE, immediate. = TRUE)
+                if (isTRUE(warnings)) {
+                  warning(msg, call. = FALSE, immediate. = TRUE)
+                }
                 noDataSym <- c(noDataSym, returnSym[[i]])
             }
         }
@@ -526,6 +582,7 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg("verbose")) verbose <- FALSE
      if(!hasArg("auto.assign")) auto.assign <- TRUE
+     if(!hasArg("warnings")) warnings <- TRUE
 
      if(!requireNamespace("DBI", quietly=TRUE))
        stop("package:",dQuote("DBI"),"cannot be loaded.")
@@ -577,7 +634,9 @@ function(Symbols,env,return.class='xts',
                 if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
                   stop(msg)
                 }
-                warning(msg, call. = FALSE, immediate. = TRUE)
+                if (isTRUE(warnings)) {
+                  warning(msg, call. = FALSE, immediate. = TRUE)
+                }
             }
         }
         DBI::dbDisconnect(con)
@@ -602,6 +661,7 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg("verbose")) verbose <- FALSE
      if(!hasArg("auto.assign")) auto.assign <- TRUE
+     if(!hasArg("warnings")) warnings <- TRUE
 
      if(!requireNamespace("DBI", quietly=TRUE))
        stop("package:",dQuote("DBI"),"cannot be loaded.")
@@ -649,7 +709,9 @@ function(Symbols,env,return.class='xts',
               if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
                 stop(msg)
               }
-              warning(msg, call. = FALSE, immediate. = TRUE)
+              if (isTRUE(warnings)) {
+                warning(msg, call. = FALSE, immediate. = TRUE)
+              }
               noDataSym <- c(noDataSym, returnSym[[i]])
             }
         }
@@ -672,6 +734,7 @@ function(Symbols,env,return.class='xts',
      }
      if(!hasArg("verbose")) verbose <- FALSE
      if(!hasArg("auto.assign")) auto.assign <- TRUE
+     if(!hasArg("warnings")) warnings <- TRUE
      if(!hasArg("from")) from <- ""
      if(!hasArg("to")) to <- ""
 
@@ -696,7 +759,7 @@ function(Symbols,env,return.class='xts',
        fr <- fr[paste(from, to, sep = "/")]
 
        fr <- convert.time.series(fr=fr,return.class=return.class)
-       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+       Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
        }, silent = TRUE)
@@ -706,7 +769,9 @@ function(Symbols,env,return.class='xts',
          if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
            stop(msg)
          }
-         warning(msg, call. = FALSE, immediate. = TRUE)
+         if (isTRUE(warnings)) {
+           warning(msg, call. = FALSE, immediate. = TRUE)
+         }
          noDataSym <- c(noDataSym, returnSym[[i]])
        }
      }
@@ -743,7 +808,7 @@ function(Currencies,from=Sys.Date()-179,to=Sys.Date(),
                    auto.assign=auto.assign,...)
   #} else {
   #  getSymbols.FRED(Symbols=Currencies,env=env,verbose=verbose,warning=warning,...)
-  #}  
+  #}
 }
 #}}}
 
@@ -765,7 +830,7 @@ function(Metals,from=Sys.Date()-179,to=Sys.Date(),
                      paste(strsplit(x,'-')[[1]][1],base.currency,sep="/")
                    }))
   getSymbols.oanda(Symbols=metals,from=from,to=to,auto.assign=auto.assign,
-                   env=env,verbose=verbose,warning=warning,...) 
+                   env=env,verbose=verbose,warning=warning,...)
 }
 #}}}
 
@@ -796,6 +861,7 @@ function(Symbols,env,
 
   if(!hasArg("verbose")) verbose <- FALSE
   if(!hasArg("auto.assign")) auto.assign <- TRUE
+  if(!hasArg("warnings")) warnings <- TRUE
 
   returnSym <- Symbols
   noDataSym <- NULL
@@ -811,7 +877,7 @@ function(Symbols,env,
     extension <- getSymbolLookup()[[Symbols[[i]]]]$extension
     extension <- ifelse(is.null(extension),default.extension,
                            extension)
-                   
+
     if(verbose) cat("loading ",Symbols[[i]],".....")
     if(dir=="") {
       sym.file <- paste(Symbols[[i]],extension,sep=".")
@@ -824,7 +890,7 @@ function(Symbols,env,
       next
     }
     fr <- read.csv(sym.file)
-    if(verbose)  
+    if(verbose)
       cat("done.\n")
 
     # ensure date column is character before calling as.Date
@@ -839,7 +905,7 @@ function(Symbols,env,
     fr <- xts(fr[,-1],do.call("as.Date", asDateArgs),src='csv',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),col.names,sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
-    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
     if(auto.assign)
       assign(Symbols[[i]],fr,env)
     }, silent = TRUE)
@@ -849,7 +915,9 @@ function(Symbols,env,
        if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
          stop(msg)
        }
-       warning(msg, call. = FALSE, immediate. = TRUE)
+       if (isTRUE(warnings)) {
+         warning(msg, call. = FALSE, immediate. = TRUE)
+       }
       noDataSym <- c(noDataSym, returnSym[[i]])
     }
     }
@@ -879,6 +947,7 @@ function(Symbols,env,
 
   if(!hasArg("verbose")) verbose <- FALSE
   if(!hasArg("auto.assign")) auto.assign <- TRUE
+  if(!hasArg("warnings")) warnings <- TRUE
 
   returnSym <- Symbols
   noDataSym <- NULL
@@ -907,12 +976,12 @@ function(Symbols,env,
     }
     #fr <- read.csv(sym.file)
     fr <- readRDS(sym.file)
-    if(verbose)  
+    if(verbose)
       cat("done.\n")
     if(!is.xts(fr)) fr <- xts(fr[,-1],as.Date(fr[,1],origin='1970-01-01'),src='rda',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),col.names,sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
-    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
     if(auto.assign)
       assign(Symbols[[i]],fr,env)
     }, silent = TRUE)
@@ -922,7 +991,9 @@ function(Symbols,env,
       if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
         stop(msg)
       }
-      warning(msg, call. = FALSE, immediate. = TRUE)
+      if (isTRUE(warnings)) {
+        warning(msg, call. = FALSE, immediate. = TRUE)
+      }
       noDataSym <- c(noDataSym, returnSym[[i]])
     }
     }
@@ -952,6 +1023,7 @@ function(Symbols,env,
 
   if(!hasArg("verbose")) verbose <- FALSE
   if(!hasArg("auto.assign")) auto.assign <- TRUE
+  if(!hasArg("warnings")) warnings <- TRUE
 
   returnSym <- Symbols
   noDataSym <- NULL
@@ -981,12 +1053,12 @@ function(Symbols,env,
     #fr <- read.csv(sym.file)
     local.name <- load(sym.file)
     assign('fr',get(local.name))
-    if(verbose)  
+    if(verbose)
       cat("done.\n")
     if(!is.xts(fr)) fr <- xts(fr[,-1],as.Date(fr[,1],origin='1970-01-01'),src='rda',updated=Sys.time())
     colnames(fr) <- paste(toupper(gsub('\\^','',Symbols[[i]])),col.names,sep='.')
     fr <- convert.time.series(fr=fr,return.class=return.class)
-    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]])) 
+    Symbols[[i]] <-toupper(gsub('\\^','',Symbols[[i]]))
     if(auto.assign)
       assign(Symbols[[i]],fr,env)
     }, silent = TRUE)
@@ -996,7 +1068,9 @@ function(Symbols,env,
       if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
         stop(msg)
       }
-      warning(msg, call. = FALSE, immediate. = TRUE)
+      if (isTRUE(warnings)) {
+        warning(msg, call. = FALSE, immediate. = TRUE)
+      }
       noDataSym <- c(noDataSym, returnSym[[i]])
     }
     }
@@ -1020,16 +1094,16 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
   for(var in names(list(...))) {
     assign(var, list(...)[[var]], this.env)
   }
-  if(!hasArg("verbose"))
-    verbose <- FALSE
-  if(!hasArg("auto.assign"))
-    auto.assign <- TRUE
+  if(!hasArg("verbose")) verbose <- FALSE
+  if(!hasArg("auto.assign")) auto.assign <- TRUE
+  if(!hasArg("warnings")) warnings <- TRUE
+
   if(is.method.available("twsConnect","IBrokers")) {
     tws <- do.call('twsConnect',list(clientId=1001))
     on.exit(do.call('twsDisconnect',list(tws)))
-  
+
     if(missing(endDateTime)) endDateTime <- NULL
-  
+
     returnSym <- Symbols
     noDataSym <- NULL
 
@@ -1052,7 +1126,7 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
           }
           if(verbose) cat('done\n')
         }
-      } else {
+      } else if (isTRUE(warnings)) {
         warning(paste('unable to load',Symbols[i],': missing twsContract definition'))
       }
     }, silent = TRUE)
@@ -1062,13 +1136,15 @@ useRTH = '1', whatToShow = 'TRADES', time.format = '1', ...)
       if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
         stop(msg)
       }
-      warning(msg, call. = FALSE, immediate. = TRUE)
+      if (isTRUE(warnings)) {
+        warning(msg, call. = FALSE, immediate. = TRUE)
+      }
       noDataSym <- c(noDataSym, returnSym[[i]])
     }
     }
     if(auto.assign)
       return(setdiff(returnSym, noDataSym))
-    return(fr) 
+    return(fr)
   }
 }
 # }}}
@@ -1119,6 +1195,7 @@ function(Symbols,env,return.class='xts',
 
      if(!hasArg("verbose")) verbose <- FALSE
      if(!hasArg("auto.assign")) auto.assign <- TRUE
+     if(!hasArg("warnings")) warnings <- TRUE
 
      returnSym <- Symbols
      noDataSym <- NULL
@@ -1139,15 +1216,20 @@ function(Symbols,env,return.class='xts',
        Symbols.name <- ifelse(is.null(Symbols.name),Symbols[[i]],Symbols.name)
        currency.pair <- strsplit(toupper(Symbols.name),"/")[[1]]
        if(length(currency.pair) != 2) {
-         warning(paste("incorrectly specified currency pair",Symbols.name))
+
+         if(isTRUE(warnings)) {
+           warning(paste("incorrectly specified currency pair",Symbols.name))
+         }
          next
        }
 
        if(verbose) cat("downloading ",Symbols.name,".....")
        # throw warning, but return as much data as possible
        if(from < Sys.Date() - 180) {
+         if(isTRUE(warnings)) {
            warning("Oanda only provides historical data for the past 180 days.",
                    " Symbol: ", Symbols[[i]])
+         }
        }
        oanda.URL <- paste0("https://fxds-hcc.oanda.com/api/data/update",
                            "?&source=OANDA&adjustment=0",
@@ -1176,7 +1258,7 @@ function(Symbols,env,return.class='xts',
        fr <- fr[paste(from, to, sep="/")]  # subset to requested timespan
        colnames(fr) <- gsub("/",".",Symbols[[i]])
        fr <- convert.time.series(fr=fr,return.class=return.class)
-       Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]])) 
+       Symbols[[i]] <-toupper(gsub('\\^|/','',Symbols[[i]]))
        if(auto.assign)
          assign(Symbols[[i]],fr,env)
      }, silent = TRUE)
@@ -1186,7 +1268,9 @@ function(Symbols,env,return.class='xts',
        if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
          stop(msg)
        }
-       warning(msg, call. = FALSE, immediate. = TRUE)
+       if (isTRUE(warnings)) {
+         warning(msg, call. = FALSE, immediate. = TRUE)
+       }
        noDataSym <- c(noDataSym, returnSym[[i]])
      }
      }
@@ -1197,9 +1281,9 @@ function(Symbols,env,return.class='xts',
 
 #
 #  Download OHLC Data From Alpha Vantage
-#  
+#
 #  Meant to be called internally by getSymbols().
-#  
+#
 getSymbols.av <- function(Symbols, env, api.key,
                           return.class="xts",
                           periodicity="daily",
@@ -1214,7 +1298,7 @@ getSymbols.av <- function(Symbols, env, api.key,
   for (var in names(list(...))) {
     assign(var, list(...)[[var]], this.env)
   }
-  
+
   if (!hasArg("api.key")) {
     stop("getSymbols.av: An API key is required (api.key). Free registration",
          " at https://www.alphavantage.co/.", call.=FALSE)
@@ -1222,15 +1306,15 @@ getSymbols.av <- function(Symbols, env, api.key,
   if (!hasArg("auto.assign")) auto.assign <- TRUE
   if (!hasArg("verbose")) verbose <- FALSE
   if (!hasArg("warnings")) warnings <- TRUE
-  
+
   valid.periodicity <- c("daily", "weekly", "monthly", "intraday")
   periodicity <- match.arg(periodicity, valid.periodicity)
   interval <- match.arg(interval, c("1min", "5min", "15min", "30min", "60min"))
   output.size <- match.arg(output.size, c("compact", "full"))
-  
+
   default.return.class <- return.class
   default.periodicity <- periodicity
-  
+
   #
   # For daily, weekly, and monthly data, timestamps are "yyyy-mm-dd".
   # For intraday data, timestamps are "yyyy-mm-dd HH:MM:SS".
@@ -1241,31 +1325,31 @@ getSymbols.av <- function(Symbols, env, api.key,
     else
       as.Date(ts)
   }
-  
+
   downloadOne <- function(sym, default.return.class, default.periodicity) {
-    
+
     return.class <- getSymbolLookup()[[sym]]$return.class
     return.class <- if (is.null(return.class)) default.return.class else return.class
-    
+
     periodicity <- getSymbolLookup()[[sym]]$periodicity
     periodicity <- if (is.null(periodicity)) default.periodicity else periodicity
     periodicity <- match.arg(periodicity, valid.periodicity)
-    
+
     if (adjusted && periodicity == "intraday")
       stop("getSymbols.av: Intraday data cannot be adjusted.", call.=FALSE)
-    
+
     sym.name <- getSymbolLookup()[[sym]]$name
     sym.name <- if (is.null(sym.name)) sym else sym.name
-    
+
     FUNCTION <- paste0("TIME_SERIES_",
       switch(periodicity,
              daily = if (adjusted) "DAILY_ADJUSTED" else "DAILY",
              weekly = if (adjusted) "WEEKLY_ADJUSTED" else "WEEKLY",
              monthly = if (adjusted) "MONTHLY_ADJUSTED" else "MONTHLY",
              intraday = "INTRADAY" ))
-    
+
     if (verbose) cat("loading", sym.name, ".....")
-    
+
     URL <- paste0("https://www.alphavantage.co/query",
                   "?function=", FUNCTION,
                   "&symbol=", sym.name,
@@ -1273,7 +1357,7 @@ getSymbols.av <- function(Symbols, env, api.key,
                   "&outputsize=", output.size,
                   "&datatype=", data.type,
                   "&apikey=", api.key)
-    
+
     if (data.type == "json") {
       lst <- jsonlite::fromJSON(URL)
 
@@ -1361,7 +1445,7 @@ getSymbols.av <- function(Symbols, env, api.key,
       assign(sym, mat, env)
     return(mat)
   }
-  
+
   returnSym <- Symbols
   noDataSym <- NULL
   matrices <- list()
@@ -1378,7 +1462,9 @@ getSymbols.av <- function(Symbols, env, api.key,
       if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
         stop(msg)
       }
-      warning(msg, call. = FALSE, immediate. = TRUE)
+      if (isTRUE(warnings)) {
+        warning(msg, call. = FALSE, immediate. = TRUE)
+      }
       noDataSym <- c(noDataSym, returnSym[[i]])
     }
   }
@@ -1395,9 +1481,9 @@ getSymbols.alphavantage <- getSymbols.av
 
 #
 #  Download OHLC Data From Tiingo
-#  
+#
 #  Meant to be called internally by getSymbols().
-#  
+#
 getSymbols.tiingo <- function(Symbols, env, api.key,
                               return.class="xts",
                               periodicity="daily",
@@ -1405,13 +1491,13 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
                               from='2007-01-01',
                               to=Sys.Date(),
                               ...) {
-  
+
   importDefaults("getSymbols.tiingo")
   this.env <- environment()
   for (var in names(list(...))) {
     assign(var, list(...)[[var]], this.env)
   }
-  
+
   if (!hasArg("api.key")) {
     stop("getSymbols.tiingo: An API key is required (api.key). Register",
          " at https://api.tiingo.com.", call.=FALSE)
@@ -1419,14 +1505,14 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
   if (!hasArg("auto.assign")) auto.assign <- TRUE
   if (!hasArg("verbose")) verbose <- FALSE
   if (!hasArg("warnings")) warnings <- TRUE
-  
+
   valid.periodicity <- c("daily", "weekly", "monthly", "annually")
   periodicity <- match.arg(periodicity, valid.periodicity)
   default.return.class <- return.class
   default.periodicity <- periodicity
-  
+
   downloadOne <- function(sym, default.return.class, default.periodicity) {
-    
+
     return.class <- getSymbolLookup()[[sym]]$return.class
     return.class <- if (is.null(return.class)) default.return.class else return.class
     periodicity <- getSymbolLookup()[[sym]]$periodicity
@@ -1434,7 +1520,7 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
     periodicity <- match.arg(periodicity, valid.periodicity)
     sym.name <- getSymbolLookup()[[sym]]$name
     sym.name <- if (is.null(sym.name)) sym else sym.name
-    
+
     if (verbose) cat("loading", sym.name, ".....")
     from.strftime <- strftime(from, format = "%Y-%m-%d")
     to.strftime <- strftime(to, format = "%Y-%m-%d")
@@ -1454,7 +1540,7 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
       msg <- sub("Error: ", "", colnames(stock.data))
       stop(msg, call. = FALSE)
     }
-    
+
     tm.stamps <- as.Date(stock.data[, "date"])
 
     if (adjust) {
@@ -1472,7 +1558,7 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
       assign(sym, xts.data, env)
     return(xts.data)
   }
-  
+
   returnSym <- Symbols
   noDataSym <- NULL
   matrices <- list()
@@ -1489,11 +1575,13 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
       if (hasArg(".has1sym.") && match.call(expand.dots=TRUE)$.has1sym.) {
         stop(msg)
       }
-      warning(msg, call. = FALSE, immediate. = TRUE)
+      if (isTRUE(warnings)) {
+        warning(msg, call. = FALSE, immediate. = TRUE)
+      }
       noDataSym <- c(noDataSym, returnSym[[i]])
     }
   }
-  
+
   if (auto.assign) {
     return(setdiff(returnSym, noDataSym))
   } else {
@@ -1537,7 +1625,7 @@ getSymbols.tiingo <- function(Symbols, env, api.key,
 }#}}}
 
 # removeSymbols {{{
-"removeSymbols" <- 
+"removeSymbols" <-
 function(Symbols=NULL,env=parent.frame()) {
     if(exists('.getSymbols',env,inherits=FALSE)) {
     getSymbols <- get('.getSymbols',env,inherits=FALSE)
@@ -1584,7 +1672,7 @@ function(Symbols=NULL,file.path=stop("must specify 'file.path'"),env=parent.fram
       save(list=each.symbol,
            file=paste(file.path,'/',each.symbol,".RData",sep=''),
            envir=env)
-    }    
+    }
   }
 }
 # }}}
