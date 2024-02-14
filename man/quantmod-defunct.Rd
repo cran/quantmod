@@ -7,7 +7,7 @@
 \alias{getFinancials.google}
 %
 \description{
-  The functions listed here are no longer part of \pkg{quantmod}.
+  The functionality listed here is no longer part of \pkg{quantmod}.
 }
 \usage{
   # Defunct in 0.4-13
