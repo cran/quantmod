@@ -1,6 +1,6 @@
-593e4022e8e215f61b9748cb073a0f76 *DESCRIPTION
+409c4286df5b8701a6272ddf27ece681 *DESCRIPTION
 af925f02ac9f38e7251bb02eda1590d4 *NAMESPACE
-61e65b9c2c1988c75f9eedf68eb7a2cc *NEWS.md
+a64e1ea2cba9e2df686d876b10770c99 *NEWS.md
 02d0bc2c534d9628859ba7bf5a4a1357 *R/Defaults.R
 00055294181660cc4b2e22a042949d60 *R/OHLC.transformations.R
 309d60f2a70e2c5cf52f6a1ee0fab7b6 *R/Price.transformations.R
@@ -41,7 +41,7 @@ cbb6427fefaa0a2579843886ac83d534 *R/gainloss.R
 2a7b0e191c145ed1bfb29d33d318e4f1 *R/getOptionChain.orats.R
 7c8b061624018026e007b55ed02fb5cc *R/getQuote.R
 5c7a8ea96304a5c9b28dfcfe339ca036 *R/getSplits.R
-d9b101532f0d86f5770c6b62de33ffb1 *R/getSymbols.R
+299f76f2be01625a7ef7a3ee412fda02 *R/getSymbols.R
 5c598fd03160fd930ce31443e7d9ee64 *R/getSymbols.skeleton.R
 ce5eaff302ecf73b9767a2f8446f9ae8 *R/loadSymbols.R
 d426754ea5d8c4c646efee80586f78d6 *R/modelData.R
@@ -95,7 +95,7 @@ af0d6faa51111906f86d4f0e411ce376 *man/adjustOHLC.Rd
 2cb1d30494808d42b4d1ddc1c23a719e *man/attachSymbols.Rd
 208cfabf1b73107d19452c9b39fb39ab *man/buildData.Rd
 e1285ed50dec7c8be5ef121ec06f9aaa *man/buildModel.Rd
-5833661724c347c77bd9f45054ca1eab *man/chartSeries.Rd
+b913f9649c4328c1467085917092a461 *man/chartSeries.Rd
 0a61a6717495e77245c0c071069999f7 *man/chartTheme.Rd
 6dd44b27ce4d5d0616b7f4b117c858be *man/chart_Series.Rd
 45aa329f141b84b459e82b5a04bc419d *man/chob-class.Rd
@@ -113,16 +113,16 @@ cc9a058588af59a0e62402a60269e09b *man/getQuote.Rd
 8b78a05483d174fe73bd61cca5408b83 *man/getSplits.Rd
 61a9cf999515950bb03cff6fe60fc99f *man/getSymbols.FRED.Rd
 4414a58435730a9f65d3ccdcc8e7f951 *man/getSymbols.MySQL.Rd
-45f79106c6e95fcdca2e8f4d0e24024a *man/getSymbols.Rd
+c1899a0a7e1e941f24ca482cb0ef2712 *man/getSymbols.Rd
 bdbf6c77f13c2d0d5bcac08b5c64b402 *man/getSymbols.SQLite.Rd
 9057b50d06b9aabc8b1420357a6e3229 *man/getSymbols.av.Rd
-1ee6d77ede0a33ef77d16b666e604afb *man/getSymbols.csv.Rd
+834d51a58e1d2284adc854b03025812f *man/getSymbols.csv.Rd
 c10790c811d0c5fc2f7766d92f670142 *man/getSymbols.oanda.Rd
 dbfd3a6b8beda5133ba2ad6edaa1100c *man/getSymbols.rda.Rd
 820f511c2401f72bd91e6a37738199ce *man/getSymbols.tiingo.Rd
 d22737b7a4488697912bbf5280ddb7fa *man/getSymbols.yahoo.Rd
 800143de2230ef2dbeee81d6e25a2448 *man/getSymbols.yahooj.Rd
-1d8e06c86ef44efaa7b24b6fe9648a1f *man/has.Rd
+e83c8aadccd65af8c6797015d64fd0a5 *man/has.Rd
 800667ddc676ca850ea3777f2bf6c7af *man/internal-quantmod.Rd
 8b111538ecd1370445b8971995726bda *man/is.quantmod.Rd
 7da226fb436c563fe313595b67fab75c *man/modelData.Rd
@@ -141,6 +141,6 @@ b8c1ada5347961c4591f0be419ab4870 *man/saveChart.Rd
 afdfdacbf5497f767bcd09a23cb13a3e *man/specifyModel.Rd
 c2bf7f480bc9059bfecbe11f136cfe1d *man/tradeModel.Rd
 ba287ea419bb17e7fe24fb33de89ef92 *man/zoomChart.Rd
-975487a07fe8571f5991266279128831 *tests/test-Defaults.R
+9617ace3b7a4ef91c7c2292c52d135df *tests/test-Defaults.R
 88e57b900ffedf3ba9c644e633dc579a *tests/test-misc.R
 d829677e16b5910ce626c162951bd3e2 *tests/tinytest.R

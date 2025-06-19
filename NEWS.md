@@ -1,3 +1,21 @@
+### Changes in 0.4.28 (2025-06-18)
+
+1. Fix FRED URL. Thanks to Nicole Mirea (@nimirea) for the report!
+    [#439](https://github.com/joshuaulrich/quantmod/issues/439)
+
+1. Thanks to Michael Chirico for a couple PRs to handle some minor edge cases.
+    [#436](https://github.com/joshuaulrich/quantmod/pull/436)
+    [#437](https://github.com/joshuaulrich/quantmod/pull/437)
+
+1. Replace "YHOO" with "AAPL" where it is used in documentation, especially
+    in examples. Thanks to @dougedmunds for the report!
+    [#435](https://github.com/joshuaulrich/quantmod/issues/435)
+
+1. Update `getSymbols.csv()` documentation to note that you have to set the
+    `format` argument if the date in the CSV is not in a standard format.
+    Thanks to @reddogg24 for the report that led to this change.
+    [#428](https://github.com/joshuaulrich/quantmod/issues/428)
+
 ### Changes in 0.4.27 (2025-04-06)
 
 1. Reduce `getQuote()` batch size from 199 to 99. Yahoo started to throw an
@@ -18,6 +36,7 @@
     [#24](https://github.com/joshuaulrich/quantmod/issues/24)
     [#305](https://github.com/joshuaulrich/quantmod/pull/305)
     [#306](https://github.com/joshuaulrich/quantmod/pull/306)
+    [#426](https://github.com/joshuaulrich/quantmod/pull/426)
 
 1. Continue steps to remove `quantmod:::as.zoo.data.frame()` by throwing a
     warning every time `quantmod::as.zoo.data.frame()` is called. Previously
@@ -119,7 +138,9 @@
     The example below will create an object named `IXIC` but the value of
     `sym` will be "^IXIC".
 
-        sym <- getSymbols("^IXIC")
+    ```r
+    sym <- getSymbols("^IXIC")
+    ```
 
     That means `x <- get(sym)` will not work because an object named `^IXIC`
     doesn't exist.
