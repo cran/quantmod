@@ -387,10 +387,10 @@ function(x,
 
   #if(!is.xts(x)) x <- as.xts(x)
   x <- try.xts(x, error='chartSeries requires an xtsible object')
-
   x <- na.omit(x)
-
   tclass(x) <- "POSIXct"
+
+  if(is.null(name)) name <- as.character(match.call()['x'])
 
   if(!is.null(subset) && is.character(subset)) {
     if(strsplit(subset,' ')[[1]][1] %in% c('first','last')) {
@@ -405,8 +405,16 @@ function(x,
     } else xsubset <- which(index(x) %in% index(x[subset]))  
   } else xsubset <- 1:NROW(x)
 
-  xdata <- x
-  x <- x[xsubset]
+  # ensure there is data to plot
+  if(NROW(x) < 1) {
+    stop(sQuote(name), " does not contain any data to plot")
+  } else {
+    xdata <- x
+    x <- x[xsubset]
+    if(NROW(x) < 1) {
+      stop(sQuote(name), " does not contain any data to plot for the subset ", subset)
+    }
+  }
 
   if(is.OHLC(x)) {
     Opens <- as.numeric(Op(x))
@@ -476,8 +484,6 @@ function(x,
 
   chob <- new("chob")
   chob@call <- match.call(expand.dots=TRUE)
-  if(is.null(name)) name <- as.character(match.call()$x)
-
   chob@xdata <- xdata
   chob@xsubset <- xsubset
   chob@name <- name

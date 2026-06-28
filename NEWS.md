@@ -1,3 +1,14 @@
+### Changes in 0.4.29 (2026-06-14)
+
+1. Add `api.key` argument to `getSymbols.FRED()` and nudge users to register
+    for one if they do not provide an `api.key`. Thanks to Rob Schumaker
+    (@robschumaker) for the report.
+    [#453](https://github.com/joshuaulrich/quantmod/issues/453)
+
+1. Improve `chartSeries()` error message when 'x' has no observations. Thanks
+    to Doug Edmunds (@dougedmunds) for the suggestion.
+    [#442](https://github.com/joshuaulrich/quantmod/issues/442#event-19043440242)
+
 ### Changes in 0.4.28 (2025-06-18)
 
 1. Fix FRED URL. Thanks to Nicole Mirea (@nimirea) for the report!

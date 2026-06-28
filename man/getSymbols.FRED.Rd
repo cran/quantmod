@@ -19,6 +19,7 @@ additional getSymbols \sQuote{methods}.
 getSymbols.FRED(Symbols,
                 env,
                 return.class = "xts",
+                api.key,
                 ...)
 }
 %- maybe also 'usage' for other objects documented here.
@@ -27,6 +28,7 @@ getSymbols.FRED(Symbols,
                        the names of each symbol to be loaded}
        \item{env}{ where to create objects. (.GlobalEnv) }  
        \item{return.class}{ class of returned object }  
+       \item{api.key}{ the API key issued by FRED when you registered (character)}
        \item{\dots}{ additional parameters }
 }
 \details{
